@@ -3,20 +3,17 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
 .env
 .ipynb_checkpoints/
+
+# Data and outputs (downloaded / generated)
+data/
+outputs/
 uploads/
-# Flutter
-build/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-*.iml
-.idea/
-local.properties
-android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
-lib/firebase_options.dart
-# OS
+
+# OS / editors
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
