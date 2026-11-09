@@ -22,7 +22,7 @@ Done on 2026-11-09 before the restructure: what was run, what worked, and what w
 3. **The system prompt is never sent.** `prompt_template.format(...)` builds a prompt that is then not used; only the raw user text goes into `conversation_history`.
 4. **Conversation history is a global** shared by all users and grows without bound.
 5. Imports `langchain.prompts.PromptTemplate` and `skimage` just for string formatting / unused code, so they add heavy dependencies for nothing.
-6. `main.py` and `jpeg.py` have hard-coded macOS paths (`/Users/...`); `jpeg.py` needs fastai + PyTorch only for windowing.
+6. `main.py` and `jpeg.py` have hard-coded absolute macOS paths; `jpeg.py` needs fastai + PyTorch only for windowing.
 7. No `requirements.txt`, no README (one line), no `.env.example`, no tests.
 8. The UI loads avatar images from an external image host (`i.ibb.co`).
 
