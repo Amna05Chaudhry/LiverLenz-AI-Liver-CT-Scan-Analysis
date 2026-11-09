@@ -1,0 +1,57 @@
+/* Small component layer on top of Tailwind (CDN build has no @apply). */
+.card { border-radius: 1rem; border: 1px solid rgb(226 232 240); background: #fff; padding: 1.25rem; box-shadow: 0 1px 2px rgb(15 23 42 / 0.04); }
+.dark .card { border-color: rgb(30 41 59); background: rgb(15 23 42); }
+.card-title { font-size: 0.95rem; font-weight: 600; letter-spacing: -0.01em; }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.75em; padding: 0.05rem 0.3rem; border-radius: 0.3rem; background: rgb(241 245 249); }
+.dark .code { background: rgb(30 41 59); }
+
+.btn-primary { display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 0.6rem; background: #0F766E; color: #fff; padding: 0.55rem 1rem; font-size: 0.875rem; font-weight: 600; transition: background .15s, opacity .15s; }
+.btn-primary:hover:not(:disabled) { background: #115E59; }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-secondary { display: inline-flex; align-items: center; gap: 0.4rem; border-radius: 0.6rem; border: 1px solid rgb(203 213 225); padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 500; transition: background .15s; }
+.btn-secondary:hover { background: rgb(240 253 250); border-color: #0F766E; color: #0F766E; }
+.dark .btn-secondary { border-color: rgb(51 65 85); }
+.dark .btn-secondary:hover { background: rgb(19 78 74 / 0.3); color: #2DD4BF; border-color: #2DD4BF; }
+
+.figure { overflow: hidden; border-radius: 0.75rem; border: 1px solid rgb(226 232 240); background: #000; }
+.dark .figure { border-color: rgb(30 41 59); }
+.figure img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: contain; }
+.figure figcaption { background: #fff; padding: 0.4rem 0.6rem; font-size: 0.75rem; font-weight: 500; color: rgb(71 85 105); }
+.dark .figure figcaption { background: rgb(15 23 42); color: rgb(148 163 184); }
+
+.stat { border-radius: 0.75rem; background: rgb(248 250 252); padding: 0.7rem 0.8rem; }
+.dark .stat { background: rgb(30 41 59 / 0.6); }
+.stat dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: rgb(100 116 139); }
+.stat dd { margin-top: 0.15rem; font-size: 1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.report-h { margin-bottom: 0.35rem; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #0F766E; }
+.dark .report-h { color: #2DD4BF; }
+
+.step { position: relative; border-radius: 0.75rem; background: rgb(248 250 252); padding: 1rem; }
+.dark .step { background: rgb(30 41 59 / 0.6); }
+.step-n { display: inline-flex; height: 1.5rem; width: 1.5rem; align-items: center; justify-content: center; border-radius: 999px; background: #0F766E; color: #fff; font-size: 0.75rem; font-weight: 700; margin-bottom: 0.5rem; }
+.step-t { margin-top: 0.25rem; font-size: 0.8rem; color: rgb(100 116 139); }
+.dark .step-t { color: rgb(148 163 184); }
+
+.example { position: relative; overflow: hidden; border-radius: 0.6rem; border: 2px solid transparent; background: #000; transition: border-color .15s, transform .15s; }
+.example:hover { border-color: #14B8A6; transform: translateY(-1px); }
+.example.selected { border-color: #0F766E; }
+.example img { display: block; width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+.example span { position: absolute; inset: auto 0 0 0; background: linear-gradient(transparent, rgb(0 0 0 / 0.75)); color: #fff; font-size: 0.65rem; padding: 0.6rem 0.35rem 0.25rem; text-align: left; line-height: 1.1; }
+
+.bubble { max-width: 90%; border-radius: 0.9rem; padding: 0.55rem 0.8rem; line-height: 1.45; }
+.bubble-user { margin-left: auto; background: #0F766E; color: #fff; border-bottom-right-radius: 0.25rem; }
+.bubble-bot { background: rgb(241 245 249); border-bottom-left-radius: 0.25rem; }
+.dark .bubble-bot { background: rgb(30 41 59); }
+.bubble ul { list-style: disc; padding-left: 1.1rem; margin: 0.25rem 0; }
+.bubble code { font-size: 0.8em; }
+.chip { border-radius: 999px; border: 1px solid rgb(203 213 225); padding: 0.2rem 0.6rem; font-size: 0.72rem; color: rgb(71 85 105); transition: all .15s; }
+.chip:hover { border-color: #0F766E; color: #0F766E; background: rgb(240 253 250); }
+.dark .chip { border-color: rgb(51 65 85); color: rgb(148 163 184); }
+.dark .chip:hover { border-color: #2DD4BF; color: #2DD4BF; background: rgb(19 78 74 / 0.3); }
+.typing span { display: inline-block; width: 6px; height: 6px; margin-right: 3px; border-radius: 50%; background: rgb(148 163 184); animation: blink 1.2s infinite both; }
+.typing span:nth-child(2) { animation-delay: .2s; } .typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: .25 } 40% { opacity: 1 } }
+.skeleton { background: linear-gradient(90deg, rgb(226 232 240) 25%, rgb(241 245 249) 50%, rgb(226 232 240) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+.dark .skeleton { background: linear-gradient(90deg, rgb(30 41 59) 25%, rgb(51 65 85) 50%, rgb(30 41 59) 75%); background-size: 200% 100%; }
+@keyframes shimmer { to { background-position: -200% 0 } }

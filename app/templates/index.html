@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LiverLenz AI</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230F766E'/><path d='M7 18c0-6 6-10 13-10 4 0 6 2 6 5 0 6-7 11-13 11-4 0-6-2-6-6z' fill='white'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] },
+          colors: {
+            brand: { 50: "#F0FDFA", 100: "#CCFBF1", 200: "#99F6E4", 400: "#2DD4BF", 500: "#14B8A6", 600: "#0D9488", 700: "#0F766E", 800: "#115E59", 900: "#134E4A" },
+          },
+        },
+      },
+    };
+    try {
+      const t = localStorage.getItem("ll-theme");
+      if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark");
+    } catch (e) {}
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+</head>
+<body class="h-full bg-slate-50 text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-200">
+  <!-- Header -->
+  <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+    <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+      <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-700 text-white shadow-sm">
+        <svg viewBox="0 0 32 32" class="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M5 17c0-6.5 6.5-11 14-11 4.5 0 7 2.3 7 5.6C26 18.4 18.5 24 12 24c-4.4 0-7-2.6-7-7z"/><circle cx="20" cy="12" r="2.2" fill="#0F766E"/></svg>
+      </div>
+      <div class="min-w-0">
+        <h1 class="text-lg font-bold leading-tight tracking-tight">LiverLenz <span class="text-brand-700 dark:text-brand-400">AI</span></h1>
+        <p class="truncate text-xs text-slate-500 dark:text-slate-400">Liver segmentation on CT slices, with an auto-generated report and a scan-aware assistant</p>
+      </div>
+      <div class="ml-auto flex items-center gap-2">
+        <span class="hidden items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800 md:inline-flex dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.5 2.9a1.7 1.7 0 0 1 3 0l6.3 11.4A1.7 1.7 0 0 1 16.3 17H3.7a1.7 1.7 0 0 1-1.5-2.6L8.5 2.9zM10 7a.9.9 0 0 0-.9.9v3.4a.9.9 0 0 0 1.8 0V7.9A.9.9 0 0 0 10 7zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2z" clip-rule="evenodd"/></svg>
+          Research demo, not for clinical use
+        </span>
+        <span id="llmBadge" class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400">
+          <span class="h-2 w-2 rounded-full bg-slate-400"></span><span>Checking LLM…</span>
+        </span>
+        <a href="#about" class="hidden rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 sm:inline dark:text-slate-300 dark:hover:bg-slate-800">How it works</a>
+        <button id="themeBtn" type="button" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" aria-label="Toggle dark mode">
+          <svg class="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="hidden h-5 w-5 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-800 md:hidden dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+      Research demo, not for clinical use.
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-3">
+      <!-- Left: input + results -->
+      <div class="space-y-6 lg:col-span-2">
+        <!-- Upload card -->
+        <section class="card">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 class="card-title">1. Load a CT slice</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Axial slice, liver-windowed 3-channel JPG/PNG (as produced by <code class="code">scripts/predict.py</code>)</p>
+          </div>
+
+          <label id="dropzone" for="fileInput" class="mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-6 py-8 text-center transition hover:border-brand-500 hover:bg-brand-50/50 dark:border-slate-700 dark:hover:border-brand-400 dark:hover:bg-brand-900/10">
+            <svg class="h-10 w-10 text-brand-700 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0-4 4m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            <p class="text-sm"><span class="font-semibold text-brand-700 dark:text-brand-400">Click to upload</span> or drag and drop a slice</p>
+            <p id="fileName" class="text-xs text-slate-500 dark:text-slate-400">PNG, JPG, BMP, TIFF, WEBP · max 10 MB</p>
+            <input id="fileInput" type="file" accept="image/*" class="sr-only" />
+          </label>
+
+          <div class="mt-4">
+            <p class="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Or try an example</p>
+            <div id="examples" class="grid grid-cols-3 gap-3 sm:grid-cols-5"></div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-end gap-3">
+            <label class="text-sm">
+              <span class="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Pixel spacing (mm, optional)</span>
+              <input id="spacing" type="number" step="0.01" min="0.05" max="5" placeholder="e.g. 0.78"
+                class="w-40 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/30 dark:border-slate-700 dark:bg-slate-900" />
+            </label>
+            <button id="analyzeBtn" type="button" disabled class="btn-primary ml-auto">
+              <svg id="analyzeSpin" class="hidden h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/><path d="M22 12a10 10 0 0 0-10-10" stroke="currentColor" stroke-width="3"/></svg>
+              <span id="analyzeLabel">Analyse slice</span>
+            </button>
+          </div>
+          <div id="errorBox" class="mt-3 hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300"></div>
+        </section>
+
+        <!-- Results -->
+        <section id="results" class="card hidden">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="card-title">2. Segmentation</h2>
+            <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+              <span id="resultMeta"></span>
+              <label class="inline-flex cursor-pointer items-center gap-1.5"><input id="maskToggle" type="checkbox" class="accent-teal-700" /> raw mask</label>
+            </div>
+          </div>
+          <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            <figure class="figure"><img id="imgOriginal" alt="Original slice" /><figcaption>Original</figcaption></figure>
+            <figure class="figure"><img id="imgOverlay" alt="Liver mask overlay" /><figcaption id="overlayCaption">Liver mask overlay</figcaption></figure>
+            <figure class="figure"><img id="imgBbox" alt="Bounding box" /><figcaption>Bounding box + centroid</figcaption></figure>
+          </div>
+          <dl id="statsGrid" class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"></dl>
+          <ul id="notes" class="mt-3 space-y-1 text-xs text-amber-700 dark:text-amber-300"></ul>
+        </section>
+
+        <!-- Report -->
+        <section id="reportCard" class="card hidden">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h2 class="card-title">3. Structured report</h2>
+            <div class="flex gap-2">
+              <button id="pdfBtn" type="button" class="btn-secondary">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16"/></svg>PDF</button>
+              <button id="mdBtn" type="button" class="btn-secondary">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 4v12m0 0-4-4m4 4 4-4M4 20h16"/></svg>Markdown</button>
+            </div>
+          </div>
+          <div class="mt-4 space-y-4 text-sm leading-relaxed">
+            <div>
+              <h3 class="report-h">Findings</h3>
+              <ul id="repFindings" class="list-disc space-y-1 pl-5"></ul>
+            </div>
+            <div>
+              <h3 class="report-h">Impression <span id="repSource" class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-slate-500 dark:bg-slate-800 dark:text-slate-400"></span></h3>
+              <p id="repImpression"></p>
+            </div>
+            <div class="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              <h3 class="mb-1 font-semibold uppercase tracking-wide">Disclaimer</h3>
+              <p id="repDisclaimer"></p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Empty state -->
+        <section id="emptyState" class="card flex flex-col items-center justify-center py-12 text-center">
+          <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400">
+            <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 14c0-3 2.5-5 6-5 1.7 0 2.5.9 2.5 2.2 0 2.8-3 4.8-5.5 4.8C9 16 8 15.2 8 14z"/></svg>
+          </div>
+          <p class="mt-3 font-semibold">No slice analysed yet</p>
+          <p class="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Pick one of the example slices above to see the liver mask, bounding box, measurements and a downloadable report.</p>
+        </section>
+      </div>
+
+      <!-- Right: chat -->
+      <aside class="lg:col-span-1">
+        <section class="card flex h-[34rem] flex-col p-0 lg:sticky lg:top-20 lg:h-[calc(100vh-7rem)]">
+          <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+            <div>
+              <h2 class="card-title">Ask about this scan</h2>
+              <p id="chatContext" class="text-xs text-slate-500 dark:text-slate-400">No scan loaded</p>
+            </div>
+            <button id="clearChat" type="button" class="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">Clear</button>
+          </div>
+          <div id="chatLog" class="flex-1 space-y-3 overflow-y-auto px-4 py-4 text-sm" aria-live="polite"></div>
+          <div class="border-t border-slate-200 px-4 py-3 dark:border-slate-800">
+            <div id="suggestions" class="mb-2 flex flex-wrap gap-1.5"></div>
+            <form id="chatForm" class="flex gap-2">
+              <input id="chatInput" type="text" autocomplete="off" placeholder="e.g. How large is the liver on this slice?"
+                class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/30 dark:border-slate-700 dark:bg-slate-900" />
+              <button type="submit" class="btn-primary px-3" aria-label="Send">
+                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 14-7-4 14-3-6-7-1z"/></svg>
+              </button>
+            </form>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <!-- About -->
+    <section id="about" class="card mt-6">
+      <h2 class="card-title">About / How it works</h2>
+      <div class="mt-4 grid gap-4 text-sm md:grid-cols-4">
+        <div class="step"><span class="step-n">1</span><p class="font-semibold">Preprocess</p><p class="step-t">A CT slice in Hounsfield units becomes 3 channels: liver window (W150/L30), soft-tissue window (W200/L60) and a histogram-equalised channel, then is resized to 128×128.</p></div>
+        <div class="step"><span class="step-n">2</span><p class="font-semibold">Segment</p><p class="step-t">A SegNet-style encoder–decoder CNN (4.1 M parameters, trained on the public LiTS dataset) predicts a per-pixel liver probability; pixels above 0.5 form the mask.</p></div>
+        <div class="step"><span class="step-n">3</span><p class="font-semibold">Measure</p><p class="step-t">The mask is upsampled to the original size; area, bounding box, centroid, location and connected regions are computed with OpenCV.</p></div>
+        <div class="step"><span class="step-n">4</span><p class="font-semibold">Report &amp; chat</p><p class="step-t">Findings come straight from the measurements. An LLM (Groq / Llama by default) writes the impression and answers questions; without an API key a template is used.</p></div>
+      </div>
+      <p class="mt-4 text-xs text-slate-500 dark:text-slate-400">
+        The model segments the <strong>liver only</strong>; it does not detect tumours. Accuracy on an external held-out dataset is reported in the project README.
+        Built by Amna Choudhri and project partner as a BSc final-year project (UET Lahore, with PAF Hospital Sargodha).
+      </p>
+    </section>
+  </main>
+
+  <footer class="mx-auto max-w-7xl px-4 pb-8 pt-2 text-center text-xs text-slate-400 sm:px-6">LiverLenz AI · research demo, not a medical device</footer>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
