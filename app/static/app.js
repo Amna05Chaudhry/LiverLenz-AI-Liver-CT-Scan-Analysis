@@ -36,10 +36,10 @@ $("themeBtn").addEventListener("click", () => {
 fetch("/api/status").then((r) => r.json()).then((s) => {
   const b = $("llmBadge");
   if (s.llm.online) {
-    b.className = "inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800 dark:border-brand-700/50 dark:bg-brand-900/30 dark:text-brand-200";
+    b.className = "inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800 dark:border-brand-700/50 dark:bg-brand-900/30 dark:text-brand-200";
     b.innerHTML = `<span class="h-2 w-2 rounded-full bg-brand-500"></span><span>LLM: ${esc(s.llm.model)}</span>`;
   } else {
-    b.className = "inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400";
+    b.className = "inline-flex whitespace-nowrap items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400";
     b.innerHTML = `<span class="h-2 w-2 rounded-full bg-slate-400"></span><span>LLM offline</span>`;
     b.title = "No LLM_API_KEY set: report and chat use templates built from the measurements.";
   }
