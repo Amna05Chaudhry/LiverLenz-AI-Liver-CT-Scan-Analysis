@@ -17,3 +17,5 @@ uploads/
 Thumbs.db
 .idea/
 .vscode/
+.venv-tf/
+.claude/
