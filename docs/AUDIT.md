@@ -40,6 +40,18 @@ Done on 2026-11-09 before the restructure: what was run, what worked, and what w
     - No IoU was computed anywhere in the notebook, so the **0.9 IoU on the CV is not supported by the notebook**.
 15. **The bundled sample slice has no liver in it.** `volume-101_slice_204.jpg` is a pelvic slice (bladder, iliac bones), displayed spine-up because of the `np.rot90` in the LiTS loader. The model (correctly) returns an empty mask on it, so the old demo's only sample could never show a segmentation.
 
+### Running the original model the original way (2026-11-10)
+
+To rule out any conversion or preprocessing mistake on our side, the original `app.py` and `index.html` were run unchanged (except pointing `/tmp` at a local folder) with the original `liver_segmentation_model.h5`, TensorFlow 2.18 + `tf-keras` (Keras 2, the version it was saved with), batch size 1. A clear liver slice from a public CT dataset (CHAOS, patient 2) was uploaded through the page's own upload function, once as a plain greyscale image and once in the notebook's 3-channel training format.
+
+| Upload | Original app output |
+|---|---|
+| Greyscale (like an image from the web) | ![](audit/original_app_greyscale_upload.png) |
+| Notebook training format | ![](audit/original_app_training_format_upload.png) |
+
+16. **Both predicted masks are completely empty.** The third panel looks like a blue "highlight", but it is matplotlib's `jet` colour map drawn over an all-zero mask, which tints the whole image. Together with the empty "Extracted Information" and a fluent GPT-4o answer (which never saw the image), this makes the old demo look like it worked when it did not.
+17. The same result was found on 38 held-out liver slices, in 4 contrast windows and all 4 flip orientations: the model marks no liver pixels. A flat mid-grey image, on the other hand, gets probability 1.0 everywhere. The notebook's final SegNet score (per-pixel "dice" 0.9875 test) is even slightly *below* that of the collapsed U-Net that predicts all background (0.9878), consistent with a model that learned to output background. A plausible cause: the cell that saved the file ran after epoch 5, whose validation loss had jumped from 0.011 to 0.172; the better epoch-4 checkpoint went to `segnet_model2.h5` and was never used.
+
 ## What was done about it
 
-See the README. In short: a clean package (`liverlenz/`, `app/`, `scripts/`), ONNX inference (no TensorFlow needed to run the app), a provider-agnostic LLM client with an offline fallback, a new UI, and a **real held-out evaluation on an external dataset (CHAOS)** with proper volume-level Dice and IoU.
+See the README. In short: a clean package (`liverlenz/`, `app/`, `scripts/`), a provider-agnostic LLM client with an offline fallback, a new UI, and a **new model**. The goal of the project is tumour segmentation, so v2 is a two-stage U-Net (liver, then tumour inside the liver) trained on LiTS on a Kaggle GPU with binarised targets, Dice-based losses, a **patient-wise** split and held-out per-patient metrics ([`notebooks/train_lits_cascade.ipynb`](../notebooks/train_lits_cascade.ipynb)). The original SegNet weights were removed from the working tree; they remain in commit `25dd2c7`. The CHAOS images above are from Kavur et al., CHAOS challenge (Zenodo 3431873, CC BY-SA 4.0).
