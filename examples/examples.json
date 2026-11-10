@@ -1,0 +1,38 @@
+[
+  {
+    "file": "lits_0.nii.gz",
+    "thumb": "lits_0_thumb.png",
+    "title": "LiTS case 0 (volume)",
+    "description": "Held-out test patient 0: 37 axial slices around the largest tumour, 0.703 x 0.703 mm pixels, 5.0 mm slices. From MSD Task03 (LiTS), CC BY-SA 4.0.",
+    "pixel_spacing": null,
+    "expect_liver": true,
+    "expect_tumour": true
+  },
+  {
+    "file": "lits_0_slice.png",
+    "thumb": "lits_0_slice.png",
+    "title": "LiTS case 0 (single PNG)",
+    "description": "The same patient's key slice as a plain greyscale PNG, to show image upload.",
+    "pixel_spacing": 0.703,
+    "expect_liver": true,
+    "expect_tumour": true
+  },
+  {
+    "file": "lits_33.nii.gz",
+    "thumb": "lits_33_thumb.png",
+    "title": "LiTS case 33 (volume)",
+    "description": "Held-out test patient 33: 40 axial slices around the largest tumour, 1.0 x 1.0 mm pixels, 1.0 mm slices. From MSD Task03 (LiTS), CC BY-SA 4.0.",
+    "pixel_spacing": null,
+    "expect_liver": true,
+    "expect_tumour": true
+  },
+  {
+    "file": "lits_37.nii.gz",
+    "thumb": "lits_37_thumb.png",
+    "title": "LiTS case 37 (volume)",
+    "description": "Held-out test patient 37: 40 axial slices around the largest tumour, 1.0 x 1.0 mm pixels, 1.0 mm slices. From MSD Task03 (LiTS), CC BY-SA 4.0.",
+    "pixel_spacing": null,
+    "expect_liver": true,
+    "expect_tumour": true
+  }
+]
