@@ -87,7 +87,7 @@ async function analyze() {
   const isVol = (state.file?.name || state.example || "").match(/\.nii(\.gz)?$/i);
   showError(""); setBusy(true, isVol ? "Segmenting volume…" : "Analysing…");
   $("emptyState").classList.add("hidden"); $("results").classList.remove("hidden");
-  ["imgOriginal", "imgOverlay", "imgBoxes"].forEach((id) => { $(id).removeAttribute("src"); $(id).classList.add("skeleton"); });
+  ["imgOriginal", "imgBase", "imgBoxes"].forEach((id) => { $(id).removeAttribute("src"); $(id).classList.add("skeleton"); });
   const fd = new FormData();
   if (state.file) fd.append("file", state.file); else fd.append("example", state.example);
   fd.append("pixel_spacing", $("spacing").value);
@@ -101,14 +101,16 @@ async function analyze() {
     showError(err.message || "Something went wrong.");
     if (!state.result) { $("results").classList.add("hidden"); $("emptyState").classList.remove("hidden"); }
   } finally {
-    ["imgOriginal", "imgOverlay", "imgBoxes"].forEach((id) => $(id).classList.remove("skeleton"));
+    ["imgOriginal", "imgBase", "imgBoxes"].forEach((id) => $(id).classList.remove("skeleton"));
     setBusy(false);
   }
 }
 
 function renderSlice(p) {
   state.slice = p;
-  $("imgOriginal").src = p.images.original; $("imgOverlay").src = p.images.overlay; $("imgBoxes").src = p.images.boxes;
+  $("imgOriginal").src = p.images.original; $("imgBoxes").src = p.images.boxes;
+  $("imgBase").src = p.images.original; $("layerLiver").src = p.images.layer_liver;
+  $("layerTumour").src = p.images.layer_tumour; $("layerHeat").src = p.images.layer_heat;
   const st = p.stats, S = state.result.summary;
   $("sliceRange").value = p.slice;
   $("sliceLabel").textContent = `slice ${p.slice + 1} / ${st.n_slices}`;
@@ -177,6 +179,17 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") goSlice(+$("sliceRange").value - 1);
   if (e.key === "ArrowRight") goSlice(+$("sliceRange").value + 1);
 });
+
+// ------------------------------------------------------------ layer controls
+function applyLayers() {
+  const op = +$("opacity").value / 100;
+  [["tLiver", "layerLiver"], ["tTumour", "layerTumour"], ["tHeat", "layerHeat"]].forEach(([t, l]) => {
+    $(l).classList.toggle("hidden", !$(t).checked); $(l).style.opacity = op;
+  });
+  $("heatLegend").classList.toggle("hidden", !$("tHeat").checked);
+}
+["tLiver", "tTumour", "tHeat", "opacity"].forEach((id) => $(id).addEventListener("input", applyLayers));
+applyLayers();
 
 // ------------------------------------------------------------ downloads
 function baseName() { return (state.result?.filename || "scan").replace(/(\.nii)?\.[^.]+$/, ""); }

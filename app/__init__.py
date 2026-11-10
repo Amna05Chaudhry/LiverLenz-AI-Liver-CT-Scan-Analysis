@@ -9,6 +9,7 @@ import uuid
 from collections import OrderedDict
 from pathlib import Path
 
+import numpy as np
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from liverlenz import llm, report
@@ -35,7 +36,7 @@ class ResultCache:
 
     def put(self, scan, res) -> str:
         sid = uuid.uuid4().hex[:12]
-        res.tumour_prob = None            # free memory; lesion stats are already computed
+        res.tumour_prob = res.tumour_prob.astype(np.float16)   # half the memory, still fine for the heat map
         with self.lock:
             self.items[sid] = (scan, res)
             while len(self.items) > self.size:

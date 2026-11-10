@@ -163,6 +163,7 @@ class CascadeResult:
     tumour_prob: np.ndarray         # (Z, 512, 512) float32
     lesions: list[Lesion] = field(default_factory=list)
     key_slice: int = 0
+    lesion_map: np.ndarray | None = None  # (Z, 512, 512) int16: lesion id per voxel (0 = none)
 
 
 class LiverTumourCascade:
@@ -222,7 +223,7 @@ class LiverTumourCascade:
         sy = scan.original_size[1] / BASE
         sp = scan.spacing_mm
         lab, n = ndimage.label(res.tumour)
-        out = []
+        out, raw = [], {}
         for i, sl in enumerate(ndimage.find_objects(lab), start=1):
             comp = lab[sl] == i
             if comp.sum() < min_px:
@@ -245,16 +246,21 @@ class LiverTumourCascade:
                     diam = float(d.max())
                 if scan.is_volume and sp[0] > 0:
                     vol = float(comp.sum() * sp[0] * sp[1] * sp[2] / 1000.0)
+            raw[len(out)] = i
             out.append(Lesion(
                 id=0, bbox=[int(x0 * sx), int(y0 * sy), max(1, int(w * sx)), max(1, int(h * sy))], slice=int(zabs),
                 area_px=int(round(m.sum() * sx * sy)), area_mm2=None if area_mm2 is None else round(area_mm2, 1),
                 max_diameter_mm=None if diam is None else round(diam, 1), volume_ml=None if vol is None else round(vol, 2),
                 slices=[int(sl[0].start), int(sl[0].stop - 1)], mean_prob=round(float(res.tumour_prob[sl][comp].mean()), 3),
                 centroid=[int((xs.mean() + sl[2].start) * sx), int((ys.mean() + sl[1].start) * sy)]))
-        out.sort(key=lambda l: -(l.volume_ml or l.area_px))
-        for j, l in enumerate(out, 1):
-            l.id = j
-        return out
+        order = sorted(range(len(out)), key=lambda q: -(out[q].volume_ml or out[q].area_px))
+        res.lesion_map = np.zeros(lab.shape, np.int16)
+        lut = np.zeros(n + 1, np.int16)
+        for j, q in enumerate(order, 1):
+            out[q].id = j
+            lut[raw[q]] = j
+        res.lesion_map = lut[lab]
+        return [out[q] for q in order]
 
 
 # ----------------------------------------------------------- summary/render
@@ -293,28 +299,67 @@ def _to_original(img: np.ndarray, scan: Scan) -> np.ndarray:
     return cv2.resize(img, (w, h), interpolation=cv2.INTER_LINEAR) if (w, h) != (BASE, BASE) else img
 
 
+HEAT_LUT = cv2.applyColorMap(np.arange(256, dtype=np.uint8)[:, None], cv2.COLORMAP_INFERNO)[:, 0, ::-1]  # RGB
+
+
+def _contours(mask):
+    cnts, _ = cv2.findContours(mask.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    return cnts
+
+
 def render(scan: Scan, res: CascadeResult, k: int) -> dict[str, np.ndarray]:
-    """Original, overlay (liver teal + tumour red) and boxes view for slice k, at the original size."""
+    """Images for slice k at the original size.
+
+    * ``original``: the windowed slice;
+    * ``overlay``: liver (teal tint + outline) and tumour (red-orange fill + yellow outline), baked in;
+    * ``boxes``: lesion bounding boxes numbered like the lesion table;
+    * ``layer_liver`` / ``layer_tumour`` / ``layer_heat``: transparent RGBA layers for the
+      interactive viewer (toggles and opacity are applied in the browser).
+    """
     g = scan.slices[k]
     base = np.stack([g] * 3, -1)
-    ov = base.astype(np.float32)
     lv, tm = res.liver[k], res.tumour[k]
-    ov[lv] = 0.7 * ov[lv] + 0.3 * np.array(LIVER_RGB)
-    ov[tm] = 0.35 * ov[tm] + 0.65 * np.array(TUMOUR_RGB)
+    t = max(1, round(BASE / 256))
+
+    ov = base.astype(np.float32)
+    ov[lv] = 0.72 * ov[lv] + 0.28 * np.array(LIVER_RGB)
+    ov[tm] = 0.25 * ov[tm] + 0.75 * np.array(TUMOUR_RGB)
     ov = ov.astype(np.uint8)
-    for m, col in ((lv, LIVER_RGB), (tm, TUMOUR_RGB)):
-        cnts, _ = cv2.findContours(m.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(ov, cnts, -1, col, 1)
+    cv2.drawContours(ov, _contours(lv), -1, LIVER_RGB, t)
+    cv2.drawContours(ov, _contours(tm), -1, BOX_RGB, t)
+
     boxes = base.copy()
-    cnts, _ = cv2.findContours(lv.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(boxes, cnts, -1, LIVER_RGB, 1)
-    lab_n, lab, st, _ = cv2.connectedComponentsWithStats(tm.astype(np.uint8), connectivity=8)
-    for i in range(1, lab_n):
-        x, y, w, h, a = st[i]
-        if a < 5:
-            continue
-        cv2.rectangle(boxes, (x - 2, y - 2), (x + w + 1, y + h + 1), BOX_RGB, 2)
-    return {"original": _to_original(base, scan), "overlay": _to_original(ov, scan), "boxes": _to_original(boxes, scan)}
+    cv2.drawContours(boxes, _contours(lv), -1, LIVER_RGB, 1)
+    lm = res.lesion_map[k] if res.lesion_map is not None else tm.astype(np.int16)
+    for lid in [int(v) for v in np.unique(lm) if v]:
+        ys, xs = np.nonzero(lm == lid)
+        x0, y0, x1, y1 = xs.min() - 3, ys.min() - 3, xs.max() + 3, ys.max() + 3
+        cv2.rectangle(boxes, (x0, y0), (x1, y1), BOX_RGB, 2)
+        label = str(lid)
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
+        ty = y0 - 4 if y0 - th - 6 > 0 else y1 + th + 4
+        cv2.rectangle(boxes, (x0, ty - th - 3), (x0 + tw + 5, ty + 2), BOX_RGB, -1)
+        cv2.putText(boxes, label, (x0 + 2, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (20, 20, 20), 1, cv2.LINE_AA)
+
+    def rgba(mask, rgb, alpha, outline=None, outline_rgb=None):
+        a = np.zeros((BASE, BASE, 4), np.uint8)
+        a[mask] = (*rgb, alpha)
+        if outline:
+            cv2.drawContours(a, _contours(mask), -1, (*(outline_rgb or rgb), 255), outline)
+        return a
+
+    layer_liver = rgba(lv, LIVER_RGB, 90, t)
+    layer_tumour = rgba(tm, TUMOUR_RGB, 215, t + 1, BOX_RGB)
+    heat = np.zeros((BASE, BASE, 4), np.uint8)
+    if res.tumour_prob is not None:
+        p = np.asarray(res.tumour_prob[k], np.float32)
+        show = p > 0.1
+        idx = np.clip(p * 255, 0, 255).astype(np.uint8)
+        heat[..., :3] = HEAT_LUT[idx]
+        heat[..., 3] = np.where(show, np.clip(60 + 195 * p, 0, 255), 0).astype(np.uint8)
+    out = {"original": base, "overlay": ov, "boxes": boxes,
+           "layer_liver": layer_liver, "layer_tumour": layer_tumour, "layer_heat": heat}
+    return {k2: _to_original(v, scan) for k2, v in out.items()}
 
 
 def to_png_base64(rgb: np.ndarray) -> str:
