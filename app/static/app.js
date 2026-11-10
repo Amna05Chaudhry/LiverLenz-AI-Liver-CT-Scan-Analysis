@@ -267,3 +267,24 @@ $("chatForm").addEventListener("submit", (e) => { e.preventDefault(); send($("ch
 $("clearChat").addEventListener("click", () => { $("chatLog").innerHTML = ""; state.history = []; greet(); });
 function greet() { addBot("Hi! I'm the LiverLenz assistant. Load a CT scan and I can explain the lesions the model found, their size, location and the report.", false); renderSuggestions(); }
 greet();
+
+// ------------------------------------------------------------ deep links: ?example=<file>&slice=<k>&heat=1&theme=dark
+(function deepLink() {
+  const q = new URLSearchParams(location.search);
+  if (q.get("theme") === "dark") document.documentElement.classList.add("dark");
+  if (q.get("theme") === "light") document.documentElement.classList.remove("dark");
+  const ex = q.get("example"); if (!ex) return;
+  const wait = setInterval(async () => {
+    const btn = document.querySelector(`.example[data-file="${CSS.escape(ex)}"]`);
+    if (!btn) return;
+    clearInterval(wait); btn.click();
+    const k = parseInt(q.get("slice"), 10);
+    const t = setInterval(async () => {
+      if (!state.result) return;
+      clearInterval(t);
+      if (!isNaN(k)) await goSlice(k);
+      if (q.get("heat") === "1") { $("tHeat").checked = true; applyLayers(); }
+      document.body.dataset.ready = "1";
+    }, 300);
+  }, 200);
+})();

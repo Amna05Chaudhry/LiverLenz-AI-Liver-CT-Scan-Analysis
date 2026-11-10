@@ -191,13 +191,13 @@ class LiverTumourCascade:
         s1, s2 = self._sessions()
         x = scan.slices
         Z = len(x)
-        liver_p = np.zeros((Z, BASE, BASE), np.float32)
+        liver_p = np.zeros((Z, BASE, BASE), np.float16)   # half precision: large volumes on 8 GB laptops
         for k in range(Z):  # batch size 1: low, constant memory
             inp = np.stack([cv2.resize(c, (S1, S1), interpolation=cv2.INTER_AREA) for c in stack25(x, k)])[None]
             p = s1.run(None, {"input": inp.astype(np.float32) / 255.0})[0][0, 0]
             liver_p[k] = cv2.resize(p, (BASE, BASE), interpolation=cv2.INTER_LINEAR)
         liver = _largest_component(liver_p > self.threshold)
-        tum_p = np.zeros((Z, BASE, BASE), np.float32)
+        tum_p = np.zeros((Z, BASE, BASE), np.float16)
         for k in range(Z):
             box = liver_box(liver[k])
             if box is None:
