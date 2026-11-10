@@ -120,19 +120,29 @@ if SMOKE:   # synthetic volumes: an ellipse "liver" with a bright "tumour"
 
 pairs = find_pairs(INPUT_ROOT)
 print(f"found {len(pairs)} volume/segmentation pairs")
+
+# Evaluate-only mode: if checkpoints from an earlier run of this notebook are attached as input
+# (stage1.pt + stage2.pt), skip training and cache only the test patients.
+CKPT = next((p.parent for p in INPUT_ROOT.rglob("stage1.pt") if (p.parent / "stage2.pt").exists()), None)
+EVAL_ONLY = CKPT is not None
+print("evaluate-only mode, checkpoints from", CKPT) if EVAL_ONLY else print("full training run")
+
+def _split(ids):
+    rng = np.random.default_rng(SEED); perm = [int(i) for i in rng.permutation(sorted(ids))]
+    n_test = max(1, round(0.15 * len(ids))); n_val = max(1, round(0.08 * len(ids)))
+    return {"test": sorted(perm[:n_test]), "val": sorted(perm[n_test:n_test + n_val]), "train": sorted(perm[n_test + n_val:])}
+
 t0 = time.time()
+todo = {i: pairs[i] for i in _split(pairs)["test"]} if EVAL_ONLY else pairs   # all 131 LiTS volumes contain liver
 with ThreadPoolExecutor(4) as ex:
-    done = [r for r in ex.map(lambda kv: cache_volume(kv[0], *kv[1]), pairs.items()) if r is not None]
+    done = [r for r in ex.map(lambda kv: cache_volume(kv[0], *kv[1]), todo.items()) if r is not None]
 print(f"cached {len(done)} volumes in {time.time() - t0:.0f}s")
 
 # %% [markdown]
 # ## 2. Patient-wise split (fixed seed, saved to `split.json`)
 
 # %%
-ids = sorted(done)
-rng = np.random.default_rng(SEED); perm = [int(i) for i in rng.permutation(ids)]
-n_test = max(1, round(0.15 * len(ids))); n_val = max(1, round(0.08 * len(ids)))
-split = {"test": sorted(perm[:n_test]), "val": sorted(perm[n_test:n_test + n_val]), "train": sorted(perm[n_test + n_val:])}
+split = _split(pairs if EVAL_ONLY else done)
 (WORK / "split.json").write_text(json.dumps(split, indent=1))
 print({k: len(v) for k, v in split.items()})
 
@@ -246,8 +256,8 @@ def val_dice(model, loader):
 def train_stage(stage, epochs):
     tr = SliceSet(split["train"], stage, SAMPLES_PER_EPOCH, train=True)
     va = SliceSet(split["val"], stage, 0, train=False)
-    tl = torch.utils.data.DataLoader(tr, batch_size=BATCH, num_workers=0 if SMOKE else 4, drop_last=True)
-    vl = torch.utils.data.DataLoader(va, batch_size=BATCH, num_workers=0 if SMOKE else 4)
+    tl = torch.utils.data.DataLoader(tr, batch_size=BATCH, num_workers=0 if SMOKE else 2, drop_last=True)
+    vl = torch.utils.data.DataLoader(va, batch_size=BATCH, num_workers=0 if SMOKE else 2)
     model = make_model().to(DEVICE)
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
@@ -276,10 +286,19 @@ def train_stage(stage, epochs):
     del tr, va, tl, vl; gc.collect()
     return m.to(DEVICE).eval(), best, hist
 
-model1, best1, hist1 = train_stage(1, EPOCHS_S1)
-model2, best2, hist2 = train_stage(2, EPOCHS_S2)
-(WORK / "training_history.json").write_text(json.dumps({"stage1": hist1, "stage2": hist2,
-                                                        "best_val_dice": {"stage1": best1, "stage2": best2}}, indent=1))
+if EVAL_ONLY:
+    import shutil
+    def _load(stage):
+        m = make_model(); m.load_state_dict(torch.load(CKPT / f"stage{stage}.pt", map_location="cpu"))
+        shutil.copy(CKPT / f"stage{stage}.pt", WORK / f"stage{stage}.pt")
+        return m.to(DEVICE).eval()
+    model1, model2 = _load(1), _load(2)
+    print("loaded checkpoints", CKPT)
+else:
+    model1, best1, hist1 = train_stage(1, EPOCHS_S1)
+    model2, best2, hist2 = train_stage(2, EPOCHS_S2)
+    (WORK / "training_history.json").write_text(json.dumps({"stage1": hist1, "stage2": hist2,
+                                                            "best_val_dice": {"stage1": best1, "stage2": best2}}, indent=1))
 
 # %% [markdown]
 # ## 5. Cascade inference on whole volumes (same logic as the app)
