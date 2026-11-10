@@ -166,13 +166,38 @@ class CascadeResult:
     lesion_map: np.ndarray | None = None  # (Z, 512, 512) int16: lesion id per voxel (0 = none)
 
 
+def postprocess_tumour(tum_p, liver, spacing_mm, threshold=0.5, min_lesion_mm=0.0):
+    """Threshold the tumour probability inside the liver and drop lesions smaller than ``min_lesion_mm``
+    (equivalent-sphere diameter in 3-D, or equivalent-circle diameter for single slices)."""
+    tumour = (tum_p > threshold) & liver
+    if not min_lesion_mm or not tumour.any():
+        return tumour
+    from scipy import ndimage
+    lab, n = ndimage.label(tumour)
+    sizes = np.bincount(lab.ravel(), minlength=n + 1)[1:]
+    if spacing_mm and spacing_mm[1] > 0:
+        if len(tumour) > 1 and spacing_mm[0] > 0:
+            d = (6 * sizes * np.prod(spacing_mm) / np.pi) ** (1 / 3)
+        else:
+            d = 2 * np.sqrt(sizes * spacing_mm[1] * spacing_mm[2] / np.pi)
+    else:   # no spacing: assume ~0.75 mm pixels at 512
+        d = 2 * np.sqrt(sizes * 0.75 ** 2 / np.pi) if len(tumour) == 1 else (6 * sizes * 0.75 ** 2 * 2.5 / np.pi) ** (1 / 3)
+    keep = np.concatenate([[False], d >= min_lesion_mm])
+    return keep[lab]
+
+
 class LiverTumourCascade:
-    def __init__(self, models_dir: str | Path | None = None, threshold: float = 0.5):
+    def __init__(self, models_dir: str | Path | None = None, threshold: float = 0.5,
+                 tumour_threshold: float | None = None, min_lesion_mm: float | None = None, tta: bool | None = None):
         self.dir = Path(models_dir or os.getenv("LIVERLENZ_MODELS", MODELS))
         self.threshold = threshold
         self._s1 = self._s2 = None
         meta = self.dir / "model_meta.json"
         self.meta = json.loads(meta.read_text()) if meta.exists() else {}
+        pp = self.meta.get("postprocessing", {})   # chosen on validation patients, see scripts/tune_postprocessing.py
+        self.tumour_threshold = tumour_threshold if tumour_threshold is not None else pp.get("tumour_threshold", 0.5)
+        self.min_lesion_mm = min_lesion_mm if min_lesion_mm is not None else pp.get("min_lesion_mm", 0.0)
+        self.tta = tta if tta is not None else pp.get("tta", False)
 
     @property
     def available(self) -> bool:
@@ -205,9 +230,12 @@ class LiverTumourCascade:
             y0, x0, s = box
             crop = stack25(x, k)[:, y0:y0 + s, x0:x0 + s]
             inp = np.stack([cv2.resize(c, (S2, S2), interpolation=cv2.INTER_LINEAR) for c in crop])[None]
-            p = s2.run(None, {"input": inp.astype(np.float32) / 255.0})[0][0, 0]
+            inp = inp.astype(np.float32) / 255.0
+            p = s2.run(None, {"input": inp})[0][0, 0]
+            if self.tta:  # average with the left-right flipped prediction
+                p = 0.5 * (p + s2.run(None, {"input": np.ascontiguousarray(inp[..., ::-1])})[0][0, 0][:, ::-1])
             tum_p[k, y0:y0 + s, x0:x0 + s] = cv2.resize(p, (s, s), interpolation=cv2.INTER_LINEAR)
-        tumour = (tum_p > self.threshold) & liver
+        tumour = postprocess_tumour(tum_p, liver, scan.spacing_mm, self.tumour_threshold, self.min_lesion_mm)
         res = CascadeResult(liver, tumour, tum_p)
         res.lesions = self._lesions(res, scan)
         if res.lesions:
