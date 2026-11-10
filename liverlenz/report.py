@@ -32,8 +32,8 @@ def _fmt_size(l: dict) -> str:
         s = f"{l['max_diameter_mm'] / 10:.1f} cm max diameter"
         if l.get("area_mm2"):
             s += f", {l['area_mm2'] / 100:.1f} cm² on its largest slice"
-        if l.get("volume_ml"):
-            s += f", ~{l['volume_ml']:.1f} mL"
+        if l.get("volume_ml") is not None:
+            s += ", <0.1 mL" if l["volume_ml"] < 0.1 else f", ~{l['volume_ml']:.1f} mL"
         return s
     return f"{l['area_px']:,} px on its largest slice"
 

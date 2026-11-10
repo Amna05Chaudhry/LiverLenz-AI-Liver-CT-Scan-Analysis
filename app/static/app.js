@@ -24,7 +24,7 @@ function setBusy(busy, label) {
   $("analyzeLabel").textContent = busy ? (label || "Analysing…") : "Analyse scan";
 }
 function size(l) {
-  if (l.max_diameter_mm) return `${(l.max_diameter_mm / 10).toFixed(1)} cm` + (l.volume_ml ? ` · ${l.volume_ml.toFixed(1)} mL` : "");
+  if (l.max_diameter_mm) return `${(l.max_diameter_mm / 10).toFixed(1)} cm` + (l.volume_ml != null ? ` · ${l.volume_ml < 0.1 ? "<0.1" : l.volume_ml.toFixed(1)} mL` : "");
   return `${l.area_px.toLocaleString()} px`;
 }
 
