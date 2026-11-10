@@ -1,18 +1,12 @@
-"""Command-line liver segmentation (replaces the old main.py and jpeg.py).
+"""Command-line liver + tumour segmentation (replaces the old main.py and jpeg.py).
 
-Examples
---------
-Segment one or more model-ready slices (3-channel windowed JPG/PNG)::
+    python scripts/predict.py examples/lits_0.nii.gz --out outputs           # NIfTI volume
+    python scripts/predict.py scan.dcm --out outputs                          # one DICOM slice
+    python scripts/predict.py slice.png --spacing 0.78 --out outputs          # plain CT image
 
-    python scripts/predict.py examples/chaos_p02_s050.jpg --out outputs
-
-Convert a NIfTI CT volume to model-ready JPGs (what jpeg.py did) and segment them::
-
-    python scripts/predict.py --nifti volume-33.nii --slices 40:120:10 --out outputs
-
-Only export the JPGs, without running the model::
-
-    python scripts/predict.py --nifti volume-33.nii --slices ::2 --export-only --out slices
+For each input it writes ``<name>_summary.json`` (lesions with bounding boxes and sizes), a
+Markdown report, and PNG panels (original | liver + tumour overlay | lesion boxes) for the key
+slice and every slice that contains a lesion (``--all-slices`` for every slice).
 """
 from __future__ import annotations
 
@@ -26,75 +20,47 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from liverlenz.preprocess import hu_to_rgb, load_nifti  # noqa: E402
+from liverlenz import report  # noqa: E402
+from liverlenz.cascade import LiverTumourCascade, load_any, render, scan_summary  # noqa: E402
 
 
-def parse_slice(spec: str) -> slice:
-    parts = [int(p) if p else None for p in spec.split(":")]
-    return slice(*parts) if len(parts) > 1 else slice(parts[0], parts[0] + 1)
-
-
-def panel(images: list[np.ndarray]) -> np.ndarray:
-    h = max(i.shape[0] for i in images)
-    gap = np.full((h, 8, 3), 255, np.uint8)
-    out = []
-    for i, im in enumerate(images):
-        out.append(im)
-        if i < len(images) - 1:
-            out.append(gap)
-    return np.concatenate(out, axis=1)
+def panel(imgs: dict) -> np.ndarray:
+    parts = [imgs["original"], imgs["overlay"], imgs["boxes"]]
+    gap = np.full((parts[0].shape[0], 8, 3), 255, np.uint8)
+    return np.concatenate([parts[0], gap, parts[1], gap, parts[2]], axis=1)
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("images", nargs="*", help="model-ready slice images (JPG/PNG)")
-    ap.add_argument("--nifti", help="CT volume (.nii / .nii.gz) in Hounsfield units")
-    ap.add_argument("--slices", default="::2", help="slice range for --nifti, python syntax start:stop:step (default ::2)")
-    ap.add_argument("--export-only", action="store_true", help="with --nifti: only save model-ready JPGs")
-    ap.add_argument("--out", default="outputs", help="output folder (default: outputs)")
-    ap.add_argument("--spacing", type=float, help="pixel spacing in mm, to report areas in mm^2")
-    ap.add_argument("--model", help="path to the .h5 model (default: models/liver_segmentation_model.h5)")
-    ap.add_argument("--report", action="store_true", help="also write a Markdown report per slice")
+    ap.add_argument("inputs", nargs="+", help="NIfTI (.nii/.nii.gz), DICOM (.dcm) or image files")
+    ap.add_argument("--out", default="outputs")
+    ap.add_argument("--spacing", type=float, help="pixel spacing in mm for plain images")
+    ap.add_argument("--all-slices", action="store_true", help="save a panel for every slice")
+    ap.add_argument("--models", help="folder with liver_stage1.onnx and tumour_stage2.onnx (default: models/)")
     args = ap.parse_args(argv)
 
-    if not args.images and not args.nifti:
-        ap.error("give image paths or --nifti")
+    model = LiverTumourCascade(args.models)
+    if not model.available:
+        print(f"Model files not found in {model.dir}. See the README.", file=sys.stderr)
+        return 1
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-
-    inputs: list[tuple[str, np.ndarray]] = []
-    for p in args.images:
-        inputs.append((Path(p).stem, np.array(Image.open(p).convert("RGB"))))
-    if args.nifti:
-        vol = load_nifti(args.nifti)
-        stem = Path(args.nifti).name.split(".")[0]
-        idx = range(vol.shape[-1])[parse_slice(args.slices)]
-        print(f"{args.nifti}: volume {vol.shape}, exporting {len(idx)} slices")
-        for i in idx:
-            rgb = hu_to_rgb(vol[..., i])
-            name = f"{stem}_slice_{i:03d}"
-            if args.export_only:
-                Image.fromarray(rgb).save(out / f"{name}.jpg", quality=90)
-            else:
-                inputs.append((name, rgb))
-        if args.export_only:
-            print(f"Saved {len(idx)} JPGs to {out}/")
-            return 0
-
-    from liverlenz import report
-    from liverlenz.inference import LiverSegmenter, draw_bbox, overlay_mask
-
-    seg = LiverSegmenter(args.model)
-    for name, rgb in inputs:
-        res = seg.segment(rgb, pixel_spacing_mm=args.spacing)
-        s = res.stats
-        Image.fromarray(panel([rgb, overlay_mask(rgb, res.mask), draw_bbox(rgb, s)])).save(out / f"{name}_result.png")
-        (out / f"{name}.json").write_text(json.dumps(s.to_dict(), indent=2))
-        if args.report:
-            (out / f"{name}_report.md").write_text(report.build_report(s.to_dict(), name)["markdown"], encoding="utf-8")
-        msg = (f"liver {s.liver_area_pct:5.1f}% of slice, bbox {s.bbox}, {s.region}, conf {s.mean_confidence}"
-               if s.liver_detected else "no liver segmented")
-        print(f"{name}: {msg}")
+    for p in map(Path, args.inputs):
+        stem = p.name.replace(".nii.gz", "").rsplit(".", 1)[0]
+        scan = load_any(p.read_bytes(), p.name, args.spacing)
+        res = model.run(scan)
+        s = scan_summary(scan, res)
+        (out / f"{stem}_summary.json").write_text(json.dumps(s, indent=2))
+        (out / f"{stem}_report.md").write_text(report.build_report(s)["markdown"], encoding="utf-8")
+        ks = range(len(scan.slices)) if args.all_slices else sorted({s["key_slice"], *[l["slice"] for l in s["lesions"]]})
+        for k in ks:
+            Image.fromarray(panel(render(scan, res, k))).save(out / f"{stem}_slice{k:03d}.png")
+        msg = (f"{s['n_lesions']} lesion(s), tumour burden {s['tumour_burden_pct']:.1f}%" if s["tumour_detected"]
+               else ("liver found, no tumour" if s["liver_detected"] else "no liver found"))
+        print(f"{p.name}: {len(scan.slices)} slice(s): {msg}")
+        for l in s["lesions"][:10]:
+            size = f"{l['max_diameter_mm']} mm" if l["max_diameter_mm"] else f"{l['area_px']} px"
+            print(f"   lesion {l['id']}: {size}, slices {l['slices'][0]}-{l['slices'][1]}, box {l['bbox']}")
     print(f"Results written to {out}/")
     return 0
 

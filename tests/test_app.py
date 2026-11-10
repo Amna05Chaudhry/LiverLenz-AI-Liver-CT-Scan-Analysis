@@ -1,4 +1,4 @@
-"""Smoke tests: preprocessing, stats, report fallback, and the Flask API with the real model."""
+"""Tests: preprocessing, lesion statistics, report/chat fallback, and the Flask API with the real models."""
 import io
 import os
 
@@ -10,47 +10,57 @@ os.environ["LLM_API_KEY"] = ""  # force the offline/template path
 
 from app import create_app  # noqa: E402
 from liverlenz import report  # noqa: E402
-from liverlenz.inference import compute_stats  # noqa: E402
-from liverlenz.preprocess import hu_to_rgb, windowed  # noqa: E402
+from liverlenz.cascade import (BASE, CascadeResult, LiverTumourCascade, Scan, liver_box, load_image,  # noqa: E402
+                               scan_summary, slice_stats, window_u8)
+
+MODELS = LiverTumourCascade().available
 
 
-def test_windowing_matches_fastai_definition():
-    hu = np.array([-1000, -45, 30, 105, 2000], np.float32)
-    np.testing.assert_allclose(windowed(hu, 150, 30), [0, 0, 0.5, 1, 1])
+def test_window_matches_training():
+    np.testing.assert_array_equal(window_u8(np.array([-500, -100, 75, 250, 900])), [0, 0, 127, 255, 255])
 
 
-def test_hu_to_rgb_shape_and_range():
-    hu = np.random.default_rng(0).normal(40, 200, (64, 64)).astype(np.float32)
-    rgb = hu_to_rgb(hu)
-    assert rgb.shape == (64, 64, 3) and rgb.dtype == np.uint8
+def test_liver_box_is_square_and_inside():
+    m = np.zeros((BASE, BASE), bool); m[100:180, 300:500] = True
+    y0, x0, s = liver_box(m)
+    assert 0 <= y0 and 0 <= x0 and y0 + s <= BASE and x0 + s <= BASE and s >= 200
 
 
-def test_stats_on_synthetic_mask():
-    mask = np.zeros((100, 200), np.uint8)
-    mask[10:40, 20:80] = 1
-    s = compute_stats(mask, mask.astype(np.float32), pixel_spacing_mm=0.5)
-    assert s.liver_detected and s.liver_area_px == 30 * 60
-    assert s.bbox == [20, 10, 60, 30]
-    assert s.liver_area_mm2 == pytest.approx(1800 * 0.25)
-    assert "upper left" in s.region
+def _fake(spacing=(2.5, 0.8, 0.8)):
+    sl = np.zeros((5, BASE, BASE), np.uint8)
+    liver = np.zeros((5, BASE, BASE), bool); liver[1:4, 150:350, 100:300] = True
+    tum = np.zeros_like(liver); tum[2:4, 200:240, 150:190] = True
+    scan = Scan(sl, spacing, "volume", "fake.nii.gz", (BASE, BASE))
+    res = CascadeResult(liver, tum, tum.astype(np.float32) * 0.9)
+    res.lesions = LiverTumourCascade()._lesions(res, scan)
+    return scan, res
 
 
-def test_empty_mask_report():
-    s = compute_stats(np.zeros((50, 50), np.uint8), np.zeros((50, 50), np.float32)).to_dict()
-    r = report.build_report(s, "x.png")
-    assert r["source"] == "template" and "No liver" in r["findings"][0]
-    assert "## Disclaimer" in r["markdown"]
+def test_lesion_stats_from_masks():
+    scan, res = _fake()
+    assert len(res.lesions) == 1
+    l = res.lesions[0]
+    assert l.bbox == [150, 200, 40, 40] and l.slices == [2, 3]
+    assert l.max_diameter_mm == pytest.approx(np.hypot(39, 39) * 0.8, rel=0.05)
+    assert l.volume_ml == pytest.approx(2 * 40 * 40 * 2.5 * 0.64 / 1000, rel=0.01)
+    s = scan_summary(scan, res)
+    assert s["n_lesions"] == 1 and s["tumour_detected"] and s["liver_volume_ml"] > 0
+    assert slice_stats(scan, res, 2)["lesions_on_slice"]
 
 
-def _liver_stats():
-    mask = np.zeros((128, 128), np.uint8)
-    mask[30:90, 10:70] = 1
-    return compute_stats(mask, mask * 0.9).to_dict()
+def test_report_and_fallback_chat():
+    scan, res = _fake()
+    s = scan_summary(scan, res)
+    r = report.build_report(s)
+    assert r["source"] == "template" and "Lesion 1" in " ".join(r["findings"]) and "| 1 |" in r["markdown"]
+    assert "does not classify" in report.answer("Is it HCC?", s)["reply"]
+    assert "1 lesion" in report.answer("How many tumours?", s)["reply"]
+    assert report.answer("hello", {"bogus": 1})["source"] == "template"   # malformed client data
 
 
-def test_fallback_chat_refuses_tumour_claims():
-    out = report.answer("Is there a tumour?", _liver_stats())
-    assert out["source"] == "template" and "liver only" in out["reply"]
+def test_image_loader_resizes_and_keeps_size():
+    scan = load_image(np.zeros((300, 400), np.uint8), "x.png", pixel_spacing_mm=0.7)
+    assert scan.slices.shape == (1, BASE, BASE) and scan.original_size == (400, 300)
 
 
 @pytest.fixture(scope="module")
@@ -58,37 +68,31 @@ def client():
     return create_app().test_client()
 
 
-def test_status(client):
+def test_status_and_examples(client):
     d = client.get("/api/status").get_json()
     assert d["llm"]["online"] is False
+    assert isinstance(client.get("/api/examples").get_json(), list)
 
 
-def test_analyze_example(client):
-    examples = client.get("/api/examples").get_json()
-    assert 3 <= len(examples) <= 6
-    liver = next(e for e in examples if e.get("expect_liver", True))
-    d = client.post("/api/analyze", data={"example": liver["file"]}).get_json()
-    assert d["stats"]["liver_detected"]
-    assert d["images"]["overlay"].startswith("data:image/png;base64,")
+def test_bad_uploads(client):
+    assert client.post("/api/analyze", data={}).status_code in (400, 503)
+    r = client.post("/api/analyze", data={"file": (io.BytesIO(b"nope"), "x.txt")}, content_type="multipart/form-data")
+    assert r.status_code in (400, 503)
+
+
+@pytest.mark.skipif(not MODELS, reason="model files not present")
+def test_analyze_example_and_slice(client):
+    ex = client.get("/api/examples").get_json()
+    vol = next(e for e in ex if e["file"].endswith(".nii.gz"))
+    d = client.post("/api/analyze", data={"example": vol["file"]}).get_json()
+    assert d["summary"]["liver_detected"] and d["images"]["overlay"].startswith("data:image/png;base64,")
     assert "## Findings" in d["report"]["markdown"]
+    s = client.get(f"/api/slice/{d['id']}/0").get_json()
+    assert s["slice"] == 0 and "boxes" in s["images"]
 
 
-def test_analyze_upload_and_errors(client):
-    buf = io.BytesIO()
-    Image.fromarray(np.zeros((64, 64, 3), np.uint8)).save(buf, "PNG")
-    buf.seek(0)
-    r = client.post("/api/analyze", data={"file": (buf, "black.png")}, content_type="multipart/form-data")
-    assert r.status_code == 200
-    r = client.post("/api/analyze", data={"file": (io.BytesIO(b"not an image"), "x.png")},
-                    content_type="multipart/form-data")
-    assert r.status_code == 400 and "error" in r.get_json()
-    assert client.post("/api/analyze", data={}).status_code == 400
-
-
-def test_chat_endpoint(client):
-    stats = _liver_stats()
-    d = client.post("/api/chat", json={"message": "How large is the liver?", "stats": stats}).get_json()
-    assert f"{stats['liver_area_pct']:.1f}%" in d["reply"]
-    # malformed client stats must not crash the endpoint
-    r = client.post("/api/chat", json={"message": "Where is it?", "stats": {"liver_detected": True}})
-    assert r.status_code == 200 and "reply" in r.get_json()
+@pytest.mark.skipif(not MODELS, reason="model files not present")
+def test_analyze_png_upload(client):
+    buf = io.BytesIO(); Image.fromarray(np.full((256, 256), 30, np.uint8)).save(buf, "PNG"); buf.seek(0)
+    r = client.post("/api/analyze", data={"file": (buf, "blank.png")}, content_type="multipart/form-data")
+    assert r.status_code == 200 and r.get_json()["summary"]["n_slices"] == 1

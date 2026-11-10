@@ -1,8 +1,0 @@
-# Training / evaluation / model conversion (in addition to requirements.txt)
--r requirements.txt
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.15.0
-pydicom==3.0.2
-onnx==1.23.2
-h5py==3.16.0
-pytest==9.2.0

@@ -1,8 +1,8 @@
-"""Structured report + scan-aware chat assistant.
+"""Structured report + scan-aware chat for the liver/tumour cascade.
 
-Findings are always built from the measured mask statistics (deterministic).
-When an LLM is configured it writes the Impression and answers chat questions;
-otherwise templated text is used, so the app works with no API key.
+Findings are always computed from the segmentation (deterministic). When an LLM is configured it
+writes the Impression and answers chat questions; otherwise templated text is used, so the app
+works with no API key.
 """
 from __future__ import annotations
 
@@ -12,201 +12,187 @@ from datetime import datetime, timezone
 from . import llm
 
 DISCLAIMER = (
-    "Research demo, not for clinical use. LiverLenz segments the liver region on a single "
-    "2-D CT slice with a model trained on public data (LiTS). It does not detect or measure "
-    "tumours and has not been clinically validated. All findings must be reviewed by a "
-    "qualified radiologist."
+    "Research demo, not for clinical use. LiverLenz segments the liver and liver lesions on CT with "
+    "a model trained on the public LiTS dataset. It can miss lesions (especially small ones) and can "
+    "mark non-tumour tissue. It has not been clinically validated; every finding must be reviewed by "
+    "a qualified radiologist."
 )
 
-SYSTEM_PROMPT = """You are LiverLenz, an assistant inside a research demo that segments the liver on single axial CT slices.
+SYSTEM_PROMPT = """You are LiverLenz, an assistant inside a research demo that segments the liver and liver tumours on CT.
 Facts you must respect:
-- The segmentation model (a SegNet-style CNN, 128x128 input, trained on the public LiTS dataset) outputs a LIVER mask only. It does NOT detect, segment or characterise tumours or lesions. Never claim a tumour is present or absent.
-- You only know the numeric statistics provided below; you cannot see the image itself.
-- Measurements are 2-D, on one slice, in pixels unless a pixel spacing is given.
-- This is a research demo, not a medical device. Encourage review by a radiologist when clinical questions come up, briefly and without lecturing.
-Be concise (under 150 words unless asked for more), technical and precise. Use short paragraphs or bullet points."""
+- A two-stage U-Net (trained on the public LiTS dataset) produced a liver mask and a tumour mask. You only know the numbers given below; you cannot see the images.
+- The model does not classify lesions (it cannot tell HCC from metastasis, cyst or haemangioma) and can miss small lesions or produce false positives. Never state a diagnosis.
+- Sizes are in mm/cm only when pixel spacing is known; otherwise they are in pixels.
+- This is a research demo, not a medical device. Mention radiologist review briefly when clinical questions come up, without lecturing.
+Be concise (under 150 words unless asked for more), technical and precise."""
 
 
-def stats_summary(stats: dict | None) -> str:
-    if not stats:
+def _fmt_size(l: dict) -> str:
+    if l.get("max_diameter_mm"):
+        s = f"{l['max_diameter_mm'] / 10:.1f} cm max diameter"
+        if l.get("area_mm2"):
+            s += f", {l['area_mm2'] / 100:.1f} cm² on its largest slice"
+        if l.get("volume_ml"):
+            s += f", ~{l['volume_ml']:.1f} mL"
+        return s
+    return f"{l['area_px']:,} px on its largest slice"
+
+
+def _where(l: dict, w: int, h: int) -> str:
+    cx, cy = l["centroid"]
+    horiz = ["image-left (patient's right lobe side)", "central", "image-right (patient's left lobe side)"][min(int(3 * cx / w), 2)]
+    vert = ["anterior", "mid", "posterior"][min(int(3 * cy / h), 2)]
+    return f"{vert}, {horiz}"
+
+
+def summary_text(s: dict | None) -> str:
+    if not s:
         return "No scan has been analysed yet."
-    if not stats.get("liver_detected"):
-        return (f"Slice size {stats['image_width']}x{stats['image_height']} px. "
-                "No liver tissue was segmented on this slice.")
-    x, y, w, h = stats["bbox"]
-    parts = [
-        f"Slice size {stats['image_width']}x{stats['image_height']} px.",
-        f"Segmented liver area: {stats['liver_area_px']:,} px ({stats['liver_area_pct']:.1f}% of the slice).",
-        f"Bounding box: x={x}, y={y}, width={w}, height={h} px; centroid at ({stats['centroid'][0]}, {stats['centroid'][1]}).",
-        f"Location: {stats['region']}.",
-        f"Connected regions in mask: {stats['components']}.",
-        f"Mean model confidence inside the mask: {stats['mean_confidence']:.2f}.",
-    ]
-    if stats.get("liver_area_mm2"):
-        parts.append(f"With pixel spacing {stats['pixel_spacing_mm']} mm: area ~{stats['liver_area_mm2']:,} mm^2 "
-                     f"({stats['liver_area_mm2'] / 100:.1f} cm^2), box {stats['bbox_mm'][0]} x {stats['bbox_mm'][1]} mm.")
-    for note in stats.get("notes", []):
-        parts.append(f"Note: {note}")
+    w, h = s["original_size"]
+    parts = [f"Input: {s['kind']} '{s['name']}', {s['n_slices']} slice(s), {w}x{h} px."]
+    if s.get("spacing_mm"):
+        parts.append(f"Pixel spacing {s['spacing_mm'][1]:.2f} mm" + (f", slice spacing {s['spacing_mm'][0]:.2f} mm." if s["n_slices"] > 1 else "."))
+    else:
+        parts.append("Pixel spacing unknown, so sizes are in pixels.")
+    if not s["liver_detected"]:
+        parts.append("No liver was segmented.")
+        return " ".join(parts)
+    if s.get("liver_volume_ml"):
+        parts.append(f"Segmented liver volume ~{s['liver_volume_ml']:.0f} mL.")
+    if not s["tumour_detected"]:
+        parts.append("No tumour was segmented.")
+    else:
+        parts.append(f"{s['n_lesions']} lesion(s) segmented; tumour burden {s['tumour_burden_pct']:.1f}% of segmented liver"
+                     + (f", total tumour volume ~{s['tumour_volume_ml']:.1f} mL." if s.get("tumour_volume_ml") else "."))
+        for l in s["lesions"][:10]:
+            x, y, bw, bh = l["bbox"]
+            sl = f"slices {l['slices'][0]}-{l['slices'][1]}, " if s["n_slices"] > 1 else ""
+            parts.append(f"Lesion {l['id']}: {_fmt_size(l)}; {sl}{_where(l, w, h)}; box x={x}, y={y}, {bw}x{bh} px; "
+                         f"mean probability {l['mean_prob']:.2f}.")
     return " ".join(parts)
 
 
 # ------------------------------------------------------------------ report
-def _findings(stats: dict) -> list[str]:
-    if not stats.get("liver_detected"):
-        return ["No liver tissue was segmented on this slice (mask is empty).",
-                f"Slice dimensions: {stats['image_width']} x {stats['image_height']} px."]
-    x, y, w, h = stats["bbox"]
-    f = [
-        f"Liver segmented in the {stats['region']}, covering {stats['liver_area_pct']:.1f}% of the slice "
-        f"({stats['liver_area_px']:,} px).",
-        f"Bounding box {w} x {h} px at (x={x}, y={y}); centroid ({stats['centroid'][0]}, {stats['centroid'][1]}).",
-        f"Mask consists of {stats['components']} connected region{'s' if stats['components'] != 1 else ''}; "
-        f"mean model confidence {stats['mean_confidence']:.2f}.",
-    ]
-    if stats.get("liver_area_mm2"):
-        f.append(f"Using pixel spacing {stats['pixel_spacing_mm']} mm: area ~{stats['liver_area_mm2'] / 100:.1f} cm², "
-                 f"extent {stats['bbox_mm'][0]} x {stats['bbox_mm'][1]} mm.")
-    f.extend(stats.get("notes", []))
+def _findings(s: dict) -> list[str]:
+    w, h = s["original_size"]
+    f = []
+    if not s["liver_detected"]:
+        return ["No liver was segmented. The image may not contain the liver, or it may not be an axial abdominal CT."]
+    f.append("Liver segmented" + (f", volume ~{s['liver_volume_ml']:.0f} mL." if s.get("liver_volume_ml") else "."))
+    if not s["tumour_detected"]:
+        f.append("No focal liver lesion was segmented by the model.")
+    else:
+        f.append(f"{s['n_lesions']} lesion(s) segmented, tumour burden {s['tumour_burden_pct']:.1f}% of the segmented liver"
+                 + (f" (~{s['tumour_volume_ml']:.1f} mL)." if s.get("tumour_volume_ml") else "."))
+        for l in s["lesions"][:8]:
+            x, y, bw, bh = l["bbox"]
+            loc = f"slices {l['slices'][0]}–{l['slices'][1]}, " if s["n_slices"] > 1 else ""
+            f.append(f"Lesion {l['id']}: {_fmt_size(l)}; {loc}{_where(l, w, h)}; bounding box x={x}, y={y}, {bw}×{bh} px.")
+        if s["n_lesions"] > 8:
+            f.append(f"{s['n_lesions'] - 8} further smaller lesion(s) not listed.")
+    if not s.get("spacing_mm"):
+        f.append("Pixel spacing unknown: sizes are given in pixels. Upload DICOM or NIfTI, or enter the spacing, for mm.")
     return f
 
 
-def _template_impression(stats: dict) -> str:
-    if not stats.get("liver_detected"):
-        return ("No liver was segmented. The slice may lie above or below the liver, or the image may not "
-                "match the expected preprocessing (axial CT, liver window). Lesion assessment is outside the "
-                "scope of this model.")
-    pct = stats["liver_area_pct"]
-    if pct >= 10:
-        size = "a large liver cross-section, typical of a mid-hepatic level"
-    elif pct >= 3:
-        size = "a moderate liver cross-section"
-    else:
-        size = "a small liver cross-section, consistent with a slice near the dome or inferior tip"
-    conf = stats["mean_confidence"]
-    conf_txt = "high" if conf >= 0.85 else "moderate" if conf >= 0.7 else "low"
-    frag = (" The mask is fragmented, so some regions may be false positives."
-            if stats["components"] > 2 else "")
-    return (f"Automated segmentation shows {size} in the {stats['region']}, with {conf_txt} model confidence."
-            f"{frag} The liver mask is suitable for region-of-interest localisation; lesion assessment is "
-            f"outside the scope of this model and requires radiologist review.")
+def _template_impression(s: dict) -> str:
+    if not s["liver_detected"]:
+        return "No liver identified by the model; no assessment possible on this input."
+    if not s["tumour_detected"]:
+        return ("Liver segmented without any model-detected focal lesion. Small or low-contrast lesions can be missed; "
+                "this does not exclude pathology.")
+    big = s["lesions"][0]
+    return (f"{s['n_lesions']} focal liver lesion(s) segmented, the largest measuring {_fmt_size(big)}. "
+            "The model does not characterise lesions; correlation with contrast phases and radiologist review is required.")
 
 
-def _llm_impression(stats: dict) -> str | None:
-    messages = [
+def _llm_impression(s: dict) -> str | None:
+    return llm.chat([
         {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": "Scan statistics: " + stats_summary(stats) +
-         "\n\nWrite the 'Impression' section of a short structured report: 2-3 sentences, plain text, "
-         "no heading, no tumour claims, mention what the measurements suggest about slice level and segmentation quality."},
-    ]
-    return llm.chat(messages, temperature=0.2, max_tokens=220)
+        {"role": "user", "content": "Scan statistics: " + summary_text(s) + "\n\nWrite the 'Impression' of a short "
+         "structured CT report: 2-3 sentences, plain text, no heading, no diagnosis or lesion type."},
+    ], temperature=0.2, max_tokens=220)
 
 
-def build_report(stats: dict, filename: str | None = None) -> dict:
-    findings = _findings(stats)
-    impression = _llm_impression(stats)
+def build_report(s: dict) -> dict:
+    findings = _findings(s)
+    impression = _llm_impression(s)
     source = "llm" if impression else "template"
-    impression = impression or _template_impression(stats)
+    impression = impression or _template_impression(s)
     created = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    w, h = s["original_size"]
     md = [
-        "# LiverLenz AI: Segmentation Report",
-        "",
+        "# LiverLenz AI: Liver Lesion Report", "",
         f"- **Generated:** {created}",
-        f"- **Image:** {filename or 'uploaded slice'} ({stats['image_width']} x {stats['image_height']} px)",
-        "- **Model:** SegNet-style CNN, 128x128 input, trained on LiTS",
+        f"- **Input:** {s['name']} ({s['kind']}, {s['n_slices']} slice(s), {w} × {h} px)",
+        "- **Model:** two-stage U-Net (ResNet-18 encoder), trained on LiTS",
         f"- **Impression source:** {'LLM (' + (llm.status()['model'] or '') + ')' if source == 'llm' else 'template (LLM offline)'}",
-        "",
-        "## Findings",
-        *[f"- {f}" for f in findings],
-        "",
-        "## Impression",
-        impression,
-        "",
-        "## Disclaimer",
-        f"_{DISCLAIMER}_",
-        "",
+        "", "## Findings", *[f"- {x}" for x in findings], "",
     ]
+    if s["lesions"]:
+        md += ["| # | Size | Slices | Bounding box (x, y, w, h) | Mean prob. |", "|---|---|---|---|---|"]
+        for l in s["lesions"][:20]:
+            md.append(f"| {l['id']} | {_fmt_size(l)} | {l['slices'][0]}–{l['slices'][1]} | {', '.join(map(str, l['bbox']))} | {l['mean_prob']:.2f} |")
+        md.append("")
+    md += ["## Impression", impression, "", "## Disclaimer", f"_{DISCLAIMER}_", ""]
     return {"findings": findings, "impression": impression, "disclaimer": DISCLAIMER,
             "source": source, "created": created, "markdown": "\n".join(md)}
 
 
 # -------------------------------------------------------------------- chat
-def _fallback_answer(question: str, stats: dict | None) -> str:
-    q = question.lower()
-    has = bool(stats and stats.get("liver_detected"))
+def _fallback(q: str, s: dict | None) -> str:
+    q = q.lower()
 
-    def any_of(*words):
-        return any(re.search(r"\b" + w, q) for w in words)
+    def has(*w):
+        return any(re.search(r"\b" + x, q) for x in w)
 
-    if any_of("tumou?r", "lesion", "cancer", "malignan", "mass", "metasta", "hcc"):
-        return ("This model segments the **liver only**; it was not trained to detect or measure tumours, so it "
-                "cannot say whether a lesion is present. Lesion assessment needs a dedicated model and radiologist review.")
-    if stats is None and not any_of("model", "how", "accura", "dice", "iou", "train", "data"):
-        return "Upload a CT slice (or pick an example) first, then ask me about the segmentation."
-    if any_of("area", "size", "big", "large", "small", "percent", "%", "volume"):
-        if not has:
-            return "No liver was segmented on this slice, so there is no area to report."
-        extra = (f" With the pixel spacing you gave, that is about {stats['liver_area_mm2'] / 100:.1f} cm²."
-                 if stats.get("liver_area_mm2") else " Add the pixel spacing (mm) to convert this to cm².")
-        return (f"The segmented liver covers **{stats['liver_area_px']:,} px**, i.e. "
-                f"**{stats['liver_area_pct']:.1f}%** of the slice.{extra} This is a 2-D cross-section, not organ volume.")
-    if any_of("box", "bound", "where", "locat", "position", "region", "centroid", "side"):
-        if not has:
-            return "No liver was segmented, so there is no location to report."
-        x, y, w, h = stats["bbox"]
-        return (f"The liver lies in the **{stats['region']}**. Bounding box: x={x}, y={y}, {w} x {h} px; "
-                f"centroid ({stats['centroid'][0]}, {stats['centroid'][1]}). In standard radiological display the "
-                f"image left is the patient's right, where the liver normally sits.")
-    if any_of("confiden", "sure", "reliab", "quality", "trust"):
-        if not has:
-            return "The model found no liver pixels above the 0.5 threshold on this slice."
-        return (f"Mean model probability inside the mask is **{stats['mean_confidence']:.2f}** and the mask has "
-                f"{stats['components']} connected region(s). " + " ".join(stats.get("notes", [])))
-    if any_of("accura", "dice", "iou", "metric", "perform", "evaluat"):
-        return ("On a held-out external dataset (CHAOS CT, never seen in training) the model's results are "
-                "listed in the README's Results table. The notebook's 0.98 'Dice' is a per-pixel metric dominated by "
-                "background and overstates performance.")
-    if any_of("model", "how", "work", "architect", "train", "segnet", "data"):
-        return ("LiverLenz uses a SegNet-style encoder-decoder CNN (4.1 M parameters) trained on 128x128 axial slices "
-                "from the public LiTS dataset. Slices are converted to 3 channels (liver window, wider soft-tissue "
-                "window, histogram-equalised), the network predicts a per-pixel liver probability, and pixels above 0.5 form the mask.")
-    if has:
-        return "Here is what I measured on this slice: " + stats_summary(stats) + \
-               " (LLM offline: answers are templated. Add an API key in `.env` for free-form chat.)"
-    return stats_summary(stats)
+    if has("hcc", "metasta", "malignan", "benign", "cancer", "cyst", "haemangioma", "hemangioma", "type", "diagnos"):
+        return ("The model segments lesions but **does not classify them**: it cannot tell HCC from a metastasis, cyst or "
+                "haemangioma. Characterisation needs multiphase imaging and a radiologist.")
+    if s is None:
+        if has("model", "how", "work", "accura", "dice", "iou", "train", "data"):
+            return ("LiverLenz runs two U-Nets (ResNet-18 encoders) trained on the LiTS dataset: one finds the liver on the "
+                    "whole slice, the second looks for tumours inside a crop around the liver. Accuracy on held-out test "
+                    "patients is in the README results table.")
+        return "Load a CT scan or pick an example first, then ask me about the lesions."
+    if not s["liver_detected"]:
+        return "No liver was found on this input, so there are no lesions to describe."
+    if has("how many", "number", "count", "lesion", "tumou?r", "mass", "nodule", "find", "detect", "any"):
+        if not s["tumour_detected"]:
+            return "The model segmented **no tumour** on this input. Small or low-contrast lesions can be missed."
+        big = s["lesions"][0]
+        return (f"The model found **{s['n_lesions']} lesion(s)**, tumour burden **{s['tumour_burden_pct']:.1f}%** of the liver. "
+                f"The largest is {_fmt_size(big)}.")
+    if has("size", "big", "large", "diameter", "area", "volume", "cm", "mm"):
+        if not s["tumour_detected"]:
+            return "No lesion was segmented, so there is nothing to measure." + (
+                f" The liver volume is ~{s['liver_volume_ml']:.0f} mL." if s.get("liver_volume_ml") else "")
+        return " ".join(f"Lesion {l['id']}: {_fmt_size(l)}." for l in s["lesions"][:6])
+    if has("where", "locat", "box", "bound", "position", "slice", "lobe"):
+        if not s["tumour_detected"]:
+            return "No lesion was segmented."
+        w, h = s["original_size"]
+        return " ".join(f"Lesion {l['id']}: {_where(l, w, h)}, box x={l['bbox'][0]}, y={l['bbox'][1]}, {l['bbox'][2]}×{l['bbox'][3]} px"
+                        + (f", slices {l['slices'][0]}–{l['slices'][1]}" if s['n_slices'] > 1 else "") + "." for l in s["lesions"][:6])
+    if has("confiden", "sure", "reliab", "trust", "accura", "dice", "iou"):
+        probs = ", ".join(f"#{l['id']} {l['mean_prob']:.2f}" for l in s["lesions"][:6]) or "n/a"
+        return (f"Mean tumour probability per lesion: {probs}. Held-out accuracy (per-patient Dice/IoU, lesion recall) "
+                "is in the README; small lesions under 1 cm are the most often missed.")
+    return summary_text(s) + " (LLM offline: answers are templated. Add an API key in `.env` for free-form chat.)"
 
 
-_REQUIRED = {"image_width": int, "image_height": int, "liver_detected": bool, "liver_area_px": int,
-             "liver_area_pct": (int, float), "components": int}
-
-
-def clean_stats(stats) -> dict | None:
-    """Stats come back from the browser with chat requests: accept only well-formed ones."""
-    if not isinstance(stats, dict):
-        return None
-    for k, t in _REQUIRED.items():
-        if not isinstance(stats.get(k), t):
-            return None
-    if stats["liver_detected"]:
-        for k in ("bbox", "centroid"):
-            v = stats.get(k)
-            if not (isinstance(v, list) and all(isinstance(i, int) for i in v)):
-                return None
-        if not isinstance(stats.get("mean_confidence"), (int, float)) or not isinstance(stats.get("region"), str):
-            return None
-    stats.setdefault("notes", [])
-    if not isinstance(stats["notes"], list):
-        stats["notes"] = []
-    return stats
-
-
-def answer(question: str, stats: dict | None, history: list[dict] | None = None) -> dict:
-    stats = clean_stats(stats)
-    messages = [{"role": "system", "content": SYSTEM_PROMPT + "\n\nCurrent scan: " + stats_summary(stats)}]
-    for turn in (history or [])[-8:]:
-        if turn.get("role") in ("user", "assistant") and isinstance(turn.get("content"), str):
-            messages.append({"role": turn["role"], "content": turn["content"][:2000]})
-    messages.append({"role": "user", "content": question[:2000]})
-    reply = llm.chat(messages)
+def answer(question: str, s: dict | None, history: list[dict] | None = None) -> dict:
+    s = s if isinstance(s, dict) and {"liver_detected", "tumour_detected", "lesions", "original_size", "n_slices",
+                                       "kind", "name"} <= set(s) else None
+    msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\nCurrent scan: " + summary_text(s)}]
+    for t in (history or [])[-8:]:
+        if t.get("role") in ("user", "assistant") and isinstance(t.get("content"), str):
+            msgs.append({"role": t["role"], "content": t["content"][:2000]})
+    msgs.append({"role": "user", "content": question[:2000]})
+    reply = llm.chat(msgs)
     if reply:
         return {"reply": reply, "source": "llm"}
-    return {"reply": _fallback_answer(question, stats), "source": "template"}
+    try:
+        return {"reply": _fallback(question, s), "source": "template"}
+    except (KeyError, TypeError, IndexError, ValueError):
+        return {"reply": _fallback(question, None), "source": "template"}

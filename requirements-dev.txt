@@ -1,0 +1,7 @@
+# Tests and local notebook smoke test (training itself runs on Kaggle, see notebooks/)
+-r requirements.txt
+pytest==9.2.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0
+segmentation-models-pytorch==0.3.4
+onnx==1.23.2

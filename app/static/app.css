@@ -55,3 +55,7 @@
 .skeleton { background: linear-gradient(90deg, rgb(226 232 240) 25%, rgb(241 245 249) 50%, rgb(226 232 240) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
 .dark .skeleton { background: linear-gradient(90deg, rgb(30 41 59) 25%, rgb(51 65 85) 50%, rgb(30 41 59) 75%); background-size: 200% 100%; }
 @keyframes shimmer { to { background-position: -200% 0 } }
+.legend { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 2px; margin-right: 0.3rem; vertical-align: middle; }
+.tick { position: absolute; top: 0; width: 3px; height: 0.5rem; border-radius: 1px; background: #EF4444; cursor: pointer; }
+.row-btn { font-size: 0.72rem; color: #0F766E; } .dark .row-btn { color: #2DD4BF; }
+.row-btn:hover { text-decoration: underline; }
