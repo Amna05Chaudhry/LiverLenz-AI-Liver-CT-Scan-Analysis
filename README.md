@@ -55,7 +55,26 @@ flowchart LR
 
 ## Results
 
-RESULTS_PLACEHOLDER
+<!-- RESULTS:START -->
+Held-out **test set: 20 LiTS patients** (seed-42 patient-wise split; never used for training or checkpoint selection), evaluated in 3-D at 512 × 512 with the exported ONNX models on CPU ([`scripts/evaluate.py`](scripts/evaluate.py), raw numbers in [`docs/results/test_metrics.json`](docs/results/test_metrics.json)).
+
+| | Dice per patient (mean ± sd) | IoU per patient (mean ± sd) | Dice pooled over all test voxels | IoU pooled |
+|---|---|---|---|---|
+| **Liver** | 0.962 ± 0.012 | 0.927 ± 0.022 | 0.963 | 0.929 |
+| **Tumour** (18 patients with tumour) | 0.502 ± 0.264 | 0.375 ± 0.227 | 0.567 | 0.396 |
+
+| Lesion detection (3-D lesions) | Value |
+|---|---|
+| Recall, all lesions | 58.2% (82 of 141) |
+| Recall, lesions ≥ 10 mm | 98.4% (62 of 63) |
+| Precision (predicted lesions that overlap a real one) | 47.1% (262 of 556) |
+
+Validation during training (10 other patients, 2-D slices): liver Dice 0.929 (best epoch 12 of 14), tumour Dice 0.751 on liver crops (best epoch 16). Training curves and settings are in the notebook.
+
+**How to read this.** Liver segmentation is close to the published range for LiTS. Tumour Dice per patient is lower and varies a lot between patients: big lesions are segmented well, while patients with only a few tiny lesions pull the mean down (a missed 5 mm lesion gives that patient a Dice near 0). The pooled Dice weighs every voxel equally and is dominated by large tumours. For reference, top 3-D methods on the LiTS leaderboard reach about 0.96 liver and 0.80 tumour Dice per case; this is a 2.5-D model trained in about two hours on a free GPU.
+
+**The original model.** The SegNet shipped with the first version of this project produced empty masks on every liver slice we tried, through the original app and TensorFlow (see [docs/AUDIT.md](docs/AUDIT.md)); its notebook's 0.98 "Dice" was a per-pixel average dominated by background. The CV figure of 0.9 IoU is not supported by that notebook; the numbers above are what this version actually achieves.
+<!-- RESULTS:END -->
 
 ## Quick start
 
