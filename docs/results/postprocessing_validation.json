@@ -1,0 +1,484 @@
+{
+ "validation_patients": [
+  13,
+  18,
+  59,
+  65,
+  72,
+  100,
+  104,
+  105,
+  108,
+  125
+ ],
+ "baseline": {
+  "tta": false,
+  "threshold": 0.5,
+  "min_lesion_mm": 0,
+  "dice_per_patient": 0.40515710670676064,
+  "dice_pooled": 0.7628941946917089,
+  "lesion_recall": 0.7410714285714286,
+  "lesion_precision": 0.3674540682414698
+ },
+ "chosen": {
+  "tta": true,
+  "threshold": 0.5,
+  "min_lesion_mm": 7,
+  "dice_per_patient": 0.45728411320210743,
+  "dice_pooled": 0.768980796047203,
+  "lesion_recall": 0.5535714285714286,
+  "lesion_precision": 0.8208955223880597
+ },
+ "grid": [
+  {
+   "tta": true,
+   "threshold": 0.5,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.45728411320210743,
+   "dice_pooled": 0.768980796047203,
+   "lesion_recall": 0.5535714285714286,
+   "lesion_precision": 0.8208955223880597
+  },
+  {
+   "tta": true,
+   "threshold": 0.6,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.45449505734610846,
+   "dice_pooled": 0.7642276859629031,
+   "lesion_recall": 0.5267857142857143,
+   "lesion_precision": 0.8611111111111112
+  },
+  {
+   "tta": true,
+   "threshold": 0.5,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.4499787342292277,
+   "dice_pooled": 0.7689943261295841,
+   "lesion_recall": 0.6517857142857143,
+   "lesion_precision": 0.7373737373737373
+  },
+  {
+   "tta": true,
+   "threshold": 0.7,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.44947900185648354,
+   "dice_pooled": 0.7547497696490607,
+   "lesion_recall": 0.48214285714285715,
+   "lesion_precision": 0.8888888888888888
+  },
+  {
+   "tta": true,
+   "threshold": 0.6,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.44829062811720416,
+   "dice_pooled": 0.7646205695548692,
+   "lesion_recall": 0.6428571428571429,
+   "lesion_precision": 0.82
+  },
+  {
+   "tta": true,
+   "threshold": 0.5,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.44710941988003633,
+   "dice_pooled": 0.7689173688650945,
+   "lesion_recall": 0.7053571428571429,
+   "lesion_precision": 0.6222222222222222
+  },
+  {
+   "tta": true,
+   "threshold": 0.5,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.4470841323295207,
+   "dice_pooled": 0.7688706670908415,
+   "lesion_recall": 0.7142857142857143,
+   "lesion_precision": 0.486013986013986
+  },
+  {
+   "tta": true,
+   "threshold": 0.6,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.445771675994317,
+   "dice_pooled": 0.7644668519306902,
+   "lesion_recall": 0.6964285714285714,
+   "lesion_precision": 0.6834532374100719
+  },
+  {
+   "tta": true,
+   "threshold": 0.6,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.44575903619214774,
+   "dice_pooled": 0.7644580287970697,
+   "lesion_recall": 0.7053571428571429,
+   "lesion_precision": 0.5578947368421052
+  },
+  {
+   "tta": true,
+   "threshold": 0.7,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.4436347584027087,
+   "dice_pooled": 0.7552691116932603,
+   "lesion_recall": 0.6428571428571429,
+   "lesion_precision": 0.8584070796460177
+  },
+  {
+   "tta": true,
+   "threshold": 0.7,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.44168200550171055,
+   "dice_pooled": 0.7550705709160294,
+   "lesion_recall": 0.6607142857142857,
+   "lesion_precision": 0.6903225806451613
+  },
+  {
+   "tta": true,
+   "threshold": 0.7,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.44168003384357757,
+   "dice_pooled": 0.75511696222535,
+   "lesion_recall": 0.7053571428571429,
+   "lesion_precision": 0.6571428571428571
+  },
+  {
+   "tta": true,
+   "threshold": 0.4,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.44015643775315405,
+   "dice_pooled": 0.7667537018890093,
+   "lesion_recall": 0.5892857142857143,
+   "lesion_precision": 0.6986301369863014
+  },
+  {
+   "tta": true,
+   "threshold": 0.4,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.43729186229226263,
+   "dice_pooled": 0.766338079244502,
+   "lesion_recall": 0.5,
+   "lesion_precision": 0.8
+  },
+  {
+   "tta": true,
+   "threshold": 0.4,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.43042402450466183,
+   "dice_pooled": 0.7664755253367915,
+   "lesion_recall": 0.6785714285714286,
+   "lesion_precision": 0.5789473684210527
+  },
+  {
+   "tta": true,
+   "threshold": 0.3,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.4302417268891132,
+   "dice_pooled": 0.7592629921827827,
+   "lesion_recall": 0.5446428571428571,
+   "lesion_precision": 0.7272727272727273
+  },
+  {
+   "tta": true,
+   "threshold": 0.3,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.42955200877267435,
+   "dice_pooled": 0.7593746715151662,
+   "lesion_recall": 0.6607142857142857,
+   "lesion_precision": 0.6363636363636364
+  },
+  {
+   "tta": true,
+   "threshold": 0.4,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.4275484333734591,
+   "dice_pooled": 0.7661900580897687,
+   "lesion_recall": 0.7232142857142857,
+   "lesion_precision": 0.4425287356321839
+  },
+  {
+   "tta": true,
+   "threshold": 0.4,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.42682129514299594,
+   "dice_pooled": 0.7660876094425706,
+   "lesion_recall": 0.7589285714285714,
+   "lesion_precision": 0.30097087378640774
+  },
+  {
+   "tta": true,
+   "threshold": 0.3,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.42197323581602353,
+   "dice_pooled": 0.7585810561327931,
+   "lesion_recall": 0.7142857142857143,
+   "lesion_precision": 0.4796747967479675
+  },
+  {
+   "tta": false,
+   "threshold": 0.7,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.41819948373641425,
+   "dice_pooled": 0.7550041992015056,
+   "lesion_recall": 0.5,
+   "lesion_precision": 0.8024691358024691
+  },
+  {
+   "tta": true,
+   "threshold": 0.3,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.4180269977522197,
+   "dice_pooled": 0.7582520323473467,
+   "lesion_recall": 0.7678571428571429,
+   "lesion_precision": 0.37158469945355194
+  },
+  {
+   "tta": true,
+   "threshold": 0.3,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.4174415465108164,
+   "dice_pooled": 0.7581467731995231,
+   "lesion_recall": 0.7767857142857143,
+   "lesion_precision": 0.22760290556900725
+  },
+  {
+   "tta": false,
+   "threshold": 0.5,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.4160424632877088,
+   "dice_pooled": 0.7635020448363117,
+   "lesion_recall": 0.5892857142857143,
+   "lesion_precision": 0.7142857142857143
+  },
+  {
+   "tta": false,
+   "threshold": 0.6,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.4158029130213354,
+   "dice_pooled": 0.7619286648909959,
+   "lesion_recall": 0.5535714285714286,
+   "lesion_precision": 0.7625
+  },
+  {
+   "tta": false,
+   "threshold": 0.4,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.41485884003967066,
+   "dice_pooled": 0.7621351055575857,
+   "lesion_recall": 0.6160714285714286,
+   "lesion_precision": 0.6666666666666666
+  },
+  {
+   "tta": false,
+   "threshold": 0.6,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.4090718351011185,
+   "dice_pooled": 0.7616063910503973,
+   "lesion_recall": 0.6696428571428571,
+   "lesion_precision": 0.65
+  },
+  {
+   "tta": false,
+   "threshold": 0.5,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.407752195535094,
+   "dice_pooled": 0.7632768492434713,
+   "lesion_recall": 0.6875,
+   "lesion_precision": 0.6083333333333333
+  },
+  {
+   "tta": false,
+   "threshold": 0.7,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.40756211260173836,
+   "dice_pooled": 0.7549257849377332,
+   "lesion_recall": 0.6339285714285714,
+   "lesion_precision": 0.7033898305084746
+  },
+  {
+   "tta": false,
+   "threshold": 0.3,
+   "min_lesion_mm": 7,
+   "dice_per_patient": 0.40621673626632454,
+   "dice_pooled": 0.7580463710207489,
+   "lesion_recall": 0.625,
+   "lesion_precision": 0.6285714285714286
+  },
+  {
+   "tta": false,
+   "threshold": 0.4,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.4061201932112035,
+   "dice_pooled": 0.7618752585812704,
+   "lesion_recall": 0.7053571428571429,
+   "lesion_precision": 0.5619834710743802
+  },
+  {
+   "tta": false,
+   "threshold": 0.6,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.40606401074809667,
+   "dice_pooled": 0.7613771965767471,
+   "lesion_recall": 0.7142857142857143,
+   "lesion_precision": 0.5081081081081081
+  },
+  {
+   "tta": false,
+   "threshold": 0.6,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.4056283914998524,
+   "dice_pooled": 0.7613114928681252,
+   "lesion_recall": 0.7232142857142857,
+   "lesion_precision": 0.4065656565656566
+  },
+  {
+   "tta": false,
+   "threshold": 0.5,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.4054640565971217,
+   "dice_pooled": 0.7629978471387597,
+   "lesion_recall": 0.7232142857142857,
+   "lesion_precision": 0.49122807017543857
+  },
+  {
+   "tta": false,
+   "threshold": 0.7,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.4053480845047164,
+   "dice_pooled": 0.7547328827143552,
+   "lesion_recall": 0.6964285714285714,
+   "lesion_precision": 0.5642458100558659
+  },
+  {
+   "tta": false,
+   "threshold": 0.5,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.40515710670676064,
+   "dice_pooled": 0.7628941946917089,
+   "lesion_recall": 0.7410714285714286,
+   "lesion_precision": 0.3674540682414698
+  },
+  {
+   "tta": false,
+   "threshold": 0.7,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.40468903091722924,
+   "dice_pooled": 0.7546627248845842,
+   "lesion_recall": 0.7232142857142857,
+   "lesion_precision": 0.46551724137931033
+  },
+  {
+   "tta": false,
+   "threshold": 0.4,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.4036197174568812,
+   "dice_pooled": 0.7615735555450113,
+   "lesion_recall": 0.7232142857142857,
+   "lesion_precision": 0.44642857142857145
+  },
+  {
+   "tta": false,
+   "threshold": 0.4,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.40346210856704534,
+   "dice_pooled": 0.7614922070796759,
+   "lesion_recall": 0.75,
+   "lesion_precision": 0.30978260869565216
+  },
+  {
+   "tta": false,
+   "threshold": 0.3,
+   "min_lesion_mm": 5,
+   "dice_per_patient": 0.4030222663175185,
+   "dice_pooled": 0.7576575739828012,
+   "lesion_recall": 0.7053571428571429,
+   "lesion_precision": 0.5229357798165137
+  },
+  {
+   "tta": false,
+   "threshold": 0.3,
+   "min_lesion_mm": 3,
+   "dice_per_patient": 0.40117942187342215,
+   "dice_pooled": 0.7573040899712672,
+   "lesion_recall": 0.7321428571428571,
+   "lesion_precision": 0.39375
+  },
+  {
+   "tta": false,
+   "threshold": 0.3,
+   "min_lesion_mm": 0,
+   "dice_per_patient": 0.4010680669266692,
+   "dice_pooled": 0.7572170234241199,
+   "lesion_recall": 0.75,
+   "lesion_precision": 0.27548209366391185
+  },
+  {
+   "tta": true,
+   "threshold": 0.5,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.3760818167595916,
+   "dice_pooled": 0.7679063640181213,
+   "lesion_recall": 0.4642857142857143,
+   "lesion_precision": 0.9024390243902439
+  },
+  {
+   "tta": true,
+   "threshold": 0.6,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.373087795734369,
+   "dice_pooled": 0.7625019625124742,
+   "lesion_recall": 0.44642857142857145,
+   "lesion_precision": 0.9555555555555556
+  },
+  {
+   "tta": false,
+   "threshold": 0.4,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.36870603747662994,
+   "dice_pooled": 0.7623086579748812,
+   "lesion_recall": 0.5,
+   "lesion_precision": 0.8333333333333334
+  },
+  {
+   "tta": false,
+   "threshold": 0.3,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.36828724374349464,
+   "dice_pooled": 0.758096332016425,
+   "lesion_recall": 0.5178571428571429,
+   "lesion_precision": 0.7297297297297297
+  },
+  {
+   "tta": false,
+   "threshold": 0.5,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.36482813082380416,
+   "dice_pooled": 0.7625001507249626,
+   "lesion_recall": 0.48214285714285715,
+   "lesion_precision": 0.85
+  },
+  {
+   "tta": false,
+   "threshold": 0.6,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.36321711295520104,
+   "dice_pooled": 0.7604916075181198,
+   "lesion_recall": 0.42857142857142855,
+   "lesion_precision": 0.8636363636363636
+  },
+  {
+   "tta": true,
+   "threshold": 0.7,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.36317717224619284,
+   "dice_pooled": 0.7522523338063849,
+   "lesion_recall": 0.35714285714285715,
+   "lesion_precision": 0.9782608695652174
+  },
+  {
+   "tta": false,
+   "threshold": 0.7,
+   "min_lesion_mm": 10,
+   "dice_per_patient": 0.36050359972423024,
+   "dice_pooled": 0.7532058132449077,
+   "lesion_recall": 0.38392857142857145,
+   "lesion_precision": 0.8936170212765957
+  }
+ ]
+}

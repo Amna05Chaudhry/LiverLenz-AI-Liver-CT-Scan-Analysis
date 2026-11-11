@@ -61,13 +61,22 @@ Held-out **test set: 20 LiTS patients** (seed-42 patient-wise split; never used 
 | | Dice per patient (mean ± sd) | IoU per patient (mean ± sd) | Dice pooled over all test voxels | IoU pooled |
 |---|---|---|---|---|
 | **Liver** | 0.962 ± 0.012 | 0.927 ± 0.022 | 0.963 | 0.929 |
-| **Tumour** (18 patients with tumour) | 0.502 ± 0.264 | 0.375 ± 0.227 | 0.567 | 0.396 |
+| **Tumour** (18 patients with tumour) | 0.496 ± 0.285 | 0.375 ± 0.245 | 0.551 | 0.380 |
 
 | Lesion detection (3-D lesions) | Value |
 |---|---|
-| Recall, all lesions | 58.2% (82 of 141) |
-| Recall, lesions ≥ 10 mm | 98.4% (62 of 63) |
-| Precision (predicted lesions that overlap a real one) | 47.1% (262 of 556) |
+| Recall, all lesions | 44.7% (63 of 141) |
+| Recall, lesions ≥ 10 mm | 84.1% (53 of 63) |
+| Precision (predicted lesions that overlap a real one) | 77.5% (100 of 129) |
+
+**Post-processing.** The tumour output is post-processed with left-right flip test-time augmentation, a probability threshold of 0.5 and removal of predicted lesions smaller than 7 mm (equivalent diameter). These settings were chosen on the 10 validation patients only ([`scripts/tune_postprocessing.py`](scripts/tune_postprocessing.py), grid in [`docs/results/postprocessing_validation.json`](docs/results/postprocessing_validation.json)) and then applied once to the test set. Before and after, on the same 20 test patients:
+
+| Tumour output | Dice per patient | Dice pooled | Lesion precision | Lesion recall, all | Lesion recall, ≥ 10 mm |
+|---|---|---|---|---|---|
+| Raw (threshold 0.5, no filtering) | 0.502 ± 0.264 | 0.567 | 47.1% (262 of 556) | 58.2% (82 of 141) | 98.4% (62 of 63) |
+| Post-processed (used by the app) | 0.496 ± 0.285 | 0.551 | 77.5% (100 of 129) | 44.7% (63 of 141) | 84.1% (53 of 63) |
+
+On the test set, post-processing mainly raises lesion precision (fewer false alarms); tumour Dice stays about the same. The cost is recall: lesions the model only partly picks up as small fragments are removed too, which also lowers recall for lesions of 10 mm and more. On validation, the per-patient Dice rose from 0.405 to 0.457; that gain did not carry over to the test patients. Raw numbers: [`docs/results/test_metrics_raw.json`](docs/results/test_metrics_raw.json).
 
 Validation during training (10 other patients, 2-D slices): liver Dice 0.929 (best epoch 12 of 14), tumour Dice 0.751 on liver crops (best epoch 16). Training curves and settings are in the notebook.
 

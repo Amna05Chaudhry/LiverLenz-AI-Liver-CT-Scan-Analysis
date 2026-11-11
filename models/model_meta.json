@@ -20,5 +20,11 @@
   "stage1": "epoch 12, val Dice 0.9286",
   "stage2": "epoch 16, val Dice 0.7512"
  },
- "trained_on": "Kaggle GPU T4 x2, notebook amna0chaudhry/notebookdeb2a5bd66 version 1"
+ "trained_on": "Kaggle GPU T4 x2, notebook amna0chaudhry/notebookdeb2a5bd66 version 1",
+ "postprocessing": {
+  "tumour_threshold": 0.5,
+  "min_lesion_mm": 7,
+  "tta": true,
+  "selected_on": "validation patients [13, 18, 59, 65, 72, 100, 104, 105, 108, 125]"
+ }
 }

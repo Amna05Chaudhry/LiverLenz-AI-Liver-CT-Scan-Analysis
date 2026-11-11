@@ -1,0 +1,263 @@
+{
+ "protocol": "LiTS test split (seed 42, 20 patients), liver range +-12 slices, 512x512, threshold 0.5, ONNX on CPU",
+ "test_volumes": [
+  0,
+  2,
+  3,
+  4,
+  20,
+  24,
+  25,
+  33,
+  37,
+  51,
+  56,
+  68,
+  70,
+  80,
+  90,
+  91,
+  92,
+  101,
+  106,
+  111
+ ],
+ "liver_dice_per_volume": {
+  "mean": 0.9618937539529476,
+  "std": 0.012025467551767274,
+  "median": 0.9635223612243757,
+  "n": 20
+ },
+ "liver_iou_per_volume": {
+  "mean": 0.9268419325178572,
+  "std": 0.022175291346367015,
+  "median": 0.9296128174296838,
+  "n": 20
+ },
+ "liver_dice_global": 0.9629492220166724,
+ "liver_iou_global": 0.9285458749563307,
+ "tumour_dice_per_volume": {
+  "mean": 0.502364708596445,
+  "std": 0.2636857895784435,
+  "median": 0.5572653960141227,
+  "n": 18
+ },
+ "tumour_iou_per_volume": {
+  "mean": 0.37512400297599074,
+  "std": 0.22743150242532573,
+  "median": 0.3862658303278627,
+  "n": 18
+ },
+ "tumour_dice_global": 0.5669641123744401,
+ "tumour_iou_global": 0.39563846046721124,
+ "lesion_recall": 0.5815602836879432,
+ "lesion_recall_ge10mm": 0.9841269841269841,
+ "lesion_precision": 0.4712230215827338,
+ "lesion_counts": {
+  "gt": 141,
+  "det": 82,
+  "gt10": 63,
+  "det10": 62,
+  "pred": 556,
+  "pred_tp": 262
+ },
+ "total_seconds": 897,
+ "per_volume": [
+  {
+   "volume": 0,
+   "slices": 42,
+   "liver_dice": 0.9629854095073532,
+   "liver_iou": 0.9286131731761604,
+   "has_tumour": true,
+   "tumour_dice": 0.3369541121702505,
+   "tumour_iou": 0.20261263663023193,
+   "seconds": 9.3
+  },
+  {
+   "volume": 2,
+   "slices": 163,
+   "liver_dice": 0.9611735558861579,
+   "liver_iou": 0.9252494113259458,
+   "has_tumour": true,
+   "tumour_dice": 0.7766702176228885,
+   "tumour_iou": 0.6348821297505753,
+   "seconds": 45.2
+  },
+  {
+   "volume": 3,
+   "slices": 193,
+   "liver_dice": 0.9733599733087505,
+   "liver_iou": 0.9481024974701066,
+   "has_tumour": true,
+   "tumour_dice": 0.5534916529508582,
+   "tumour_iou": 0.3826397919375813,
+   "seconds": 53.9
+  },
+  {
+   "volume": 4,
+   "slices": 274,
+   "liver_dice": 0.9360094262826711,
+   "liver_iou": 0.8797159010652489,
+   "has_tumour": true,
+   "tumour_dice": 0.4558238308660817,
+   "tumour_iou": 0.2951890075610605,
+   "seconds": 87.0
+  },
+  {
+   "volume": 20,
+   "slices": 218,
+   "liver_dice": 0.96271566692758,
+   "liver_iou": 0.9281116432907371,
+   "has_tumour": true,
+   "tumour_dice": 0.23709653428528932,
+   "tumour_iou": 0.1344920688491394,
+   "seconds": 67.7
+  },
+  {
+   "volume": 24,
+   "slices": 142,
+   "liver_dice": 0.9542425857497011,
+   "liver_iou": 0.9124894289502078,
+   "has_tumour": true,
+   "tumour_dice": 0.09119079238601151,
+   "tumour_iou": 0.04777365491651206,
+   "seconds": 37.3
+  },
+  {
+   "volume": 25,
+   "slices": 256,
+   "liver_dice": 0.9563197913534538,
+   "liver_iou": 0.9162957996430897,
+   "has_tumour": true,
+   "tumour_dice": 0.04341775674923462,
+   "tumour_iou": 0.022190611664295874,
+   "seconds": 71.1
+  },
+  {
+   "volume": 33,
+   "slices": 110,
+   "liver_dice": 0.9640593129413983,
+   "liver_iou": 0.9306124616832073,
+   "has_tumour": true,
+   "tumour_dice": 0.7138439401938999,
+   "tumour_iou": 0.5550212470339863,
+   "seconds": 25.3
+  },
+  {
+   "volume": 37,
+   "slices": 112,
+   "liver_dice": 0.970765722794477,
+   "liver_iou": 0.9431921811137167,
+   "has_tumour": true,
+   "tumour_dice": 0.801733710642261,
+   "tumour_iou": 0.6690780820279804,
+   "seconds": 27.0
+  },
+  {
+   "volume": 51,
+   "slices": 80,
+   "liver_dice": 0.9477697675315162,
+   "liver_iou": 0.9007247067099488,
+   "has_tumour": true,
+   "tumour_dice": 0.8092050390025713,
+   "tumour_iou": 0.6795502714629968,
+   "seconds": 18.0
+  },
+  {
+   "volume": 56,
+   "slices": 115,
+   "liver_dice": 0.9619539755969592,
+   "liver_iou": 0.9266968448245436,
+   "has_tumour": true,
+   "tumour_dice": 0.3657907828682556,
+   "tumour_iou": 0.22383350860685228,
+   "seconds": 28.0
+  },
+  {
+   "volume": 68,
+   "slices": 88,
+   "liver_dice": 0.9442895270614031,
+   "liver_iou": 0.8944588040629636,
+   "has_tumour": true,
+   "tumour_dice": 0.756281848532771,
+   "tumour_iou": 0.608081378920599,
+   "seconds": 21.1
+  },
+  {
+   "volume": 70,
+   "slices": 134,
+   "liver_dice": 0.939765535385835,
+   "liver_iou": 0.8863751997798236,
+   "has_tumour": true,
+   "tumour_dice": 0.6750142164694414,
+   "tumour_iou": 0.5094501577751255,
+   "seconds": 32.5
+  },
+  {
+   "volume": 80,
+   "slices": 100,
+   "liver_dice": 0.9690747336968448,
+   "liver_iou": 0.9400048338827672,
+   "has_tumour": true,
+   "tumour_dice": 0.7339694308121125,
+   "tumour_iou": 0.579740686105966,
+   "seconds": 23.1
+  },
+  {
+   "volume": 90,
+   "slices": 207,
+   "liver_dice": 0.9648091990072591,
+   "liver_iou": 0.9320109858801042,
+   "has_tumour": true,
+   "tumour_dice": 0.5610391390773871,
+   "tumour_iou": 0.38989186871814413,
+   "seconds": 51.6
+  },
+  {
+   "volume": 91,
+   "slices": 213,
+   "liver_dice": 0.9810863998938628,
+   "liver_iou": 0.9628749678006712,
+   "has_tumour": false,
+   "seconds": 54.5
+  },
+  {
+   "volume": 92,
+   "slices": 203,
+   "liver_dice": 0.9708471783894614,
+   "liver_iou": 0.9433459812801818,
+   "has_tumour": true,
+   "tumour_dice": 0.02007260303224429,
+   "tumour_iou": 0.010138050043140638,
+   "seconds": 53.6
+  },
+  {
+   "volume": 101,
+   "slices": 283,
+   "liver_dice": 0.9664750158056645,
+   "liver_iou": 0.9351249660975167,
+   "has_tumour": true,
+   "tumour_dice": 0.7247961492649738,
+   "tumour_iou": 0.5683766943200509,
+   "seconds": 74.2
+  },
+  {
+   "volume": 106,
+   "slices": 192,
+   "liver_dice": 0.9706897850462238,
+   "liver_iou": 0.9430488213796802,
+   "has_tumour": false,
+   "seconds": 48.4
+  },
+  {
+   "volume": 111,
+   "slices": 257,
+   "liver_dice": 0.97948251689238,
+   "liver_iou": 0.9597900409405209,
+   "has_tumour": true,
+   "tumour_dice": 0.386172997809478,
+   "tumour_iou": 0.23929020724359398,
+   "seconds": 65.9
+  }
+ ]
+}
